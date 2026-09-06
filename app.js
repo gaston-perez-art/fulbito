@@ -1,8 +1,7 @@
 /* ====== configuración ====== */
 const TOTAL_FECHAS = 12;
-const MIN_FECHAS = 7;               // mínimo para pelear el título
 const FIJOS = ["Gastón","Darío","Bastián","Elián","Maxi","Santi","Aarón",
-               "Juli","Tiago","Eze","Andii","Gabi","Eric"];
+               "Juli","Tiago","Eze","Andii","Gabi","Eric","Víctor"];
 
 /* ====== estado ====== */
 let fechas = [];
@@ -123,15 +122,12 @@ function vTabla(){
       <td class="${r.dif>0?"dif-pos":r.dif<0?"dif-neg":""}">${r.dif>0?"+":""}${r.dif}</td>
       <td class="col-pts">${r.pts}</td>
     </tr>`).join("");
-  const faltan = fechas.length >= MIN_FECHAS
-    ? t.filter(r => r.pj < MIN_FECHAS && r.pj > 0).length : 0;
   return podio + `<table>
       <thead><tr><th></th><th>Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th>
       <th>GF</th><th>GC</th><th>DIF</th><th>PTS</th></tr></thead>
       <tbody>${filas}</tbody></table>
     <p class="nota">GF y GC son los goles del equipo en el que jugaste esa fecha.
-      Para ser campeón hacen falta ${MIN_FECHAS} de ${TOTAL_FECHAS} fechas jugadas.${
-      faltan ? ` Hoy ${faltan} jugadores todavía no llegan a ese mínimo.` : ""}</p>`;
+      No hay mínimo de fechas: campeón es el que más puntos suma.</p>`;
 }
 function vGoles(){
   if(cargando) return `<div class="vacio">Cargando…</div>`;
@@ -170,14 +166,14 @@ function vFechas(){
 function vReglas(){
   const R = [
     ["Cuándo","12 fechas, sábados a las 18. Arranca el 12/09 y cierra el 28/11. Hay dos sábados comodín para reprogramar lo que se suspenda por lluvia."],
-    ["Quién puntúa","Solo los 13 fijos: " + FIJOS.join(", ") + ". Los invitados juegan, pero no suman puntos ni goles a la tabla."],
+    ["Quién puntúa","Solo los " + FIJOS.length + " fijos: " + FIJOS.join(", ") + ". Los invitados juegan, pero no suman puntos ni goles a la tabla."],
     ["El partido","Fútbol 5, partido largo y corrido. El sistema de relevos se define en el lanzamiento y se ajusta en las primeras fechas."],
     ["Los equipos","Se arman antes de arrancar. Una vez que empezó el partido no se cambian: el resultado de la fecha es el del partido completo."],
     ["Los puntos","3 por ganar, 1 por empatar, 0 por perder. El punto es del jugador, no del equipo."],
     ["Los goles","GF y GC son los del equipo en el que jugaste esa fecha. La tabla de goleadores cuenta goles individuales."],
     ["Desempates","Puntos, después diferencia de gol, después goles a favor, después partidos ganados."],
-    ["Campeón","El que más puntos suma, con un mínimo de " + MIN_FECHAS + " de " + TOTAL_FECHAS + " fechas jugadas. Sin ese mínimo figurás en la tabla pero no peleás el título."],
-    ["El registro","Al terminar, el encargado de la fecha pasa resultado y goleadores al grupo y se carga acá. La rotación se define en el lanzamiento."],
+    ["Campeón","El que más puntos suma al cabo de las " + TOTAL_FECHAS + " fechas. No hay mínimo de partidos jugados: cuenta lo que sumaste, jugaste las que jugaste."],
+    ["El registro","Al terminar, el resultado y los goleadores se pasan al grupo y se cargan acá. El responsable es Gastón, pero cualquiera con la clave puede cargar la fecha desde el celular."],
     ["Reclamos","Lo cargado queda firme a las 48 horas. Lo que se discuta, se discute antes y en el grupo."]
   ];
   return R.map((r,i) => `<div class="regla"><div class="n">${i+1}</div>

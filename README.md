@@ -13,7 +13,7 @@ fecha y los puntos quedan pegados a la persona.
 1. Entrar al sitio y tocar el candado en la barra de arriba.
 2. Poner la clave de carga (la tiene el encargado de la planilla).
 3. Tocar el nombre de cada jugador: una vez lo pone en el equipo A, dos veces en
-   el B, tres lo saca. Solo aparecen los 13 fijos; los invitados juegan pero no
+   el B, tres lo saca. Solo aparecen los 14 fijos; los invitados juegan pero no
    puntúan.
 4. Cargar el marcador y, abajo, los goles de cada uno.
 5. Guardar. Queda visible para todo el grupo al instante.
