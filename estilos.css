@@ -14,7 +14,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--noche);color:var(--hueso);font-family:var(--texto);
-     font-size:15px;line-height:1.45;overscroll-behavior-y:contain;
+     font-size:15px;line-height:1.45;overscroll-behavior-y:contain;touch-action:manipulation;
      padding-bottom:calc(40px + env(safe-area-inset-bottom))}
 .wrap{max-width:620px;margin:0 auto}
 button,input,textarea{font-family:inherit}
@@ -178,7 +178,7 @@ section.on{display:block}
 .chip.b{background:rgba(95,224,180,.13);border-color:var(--menta);color:var(--menta)}
 input[type=text],input[type=number],input[type=password]{
   background:var(--piso);border:1px solid var(--linea);border-radius:9px;color:var(--hueso);
-  padding:11px 12px;font-size:15px;font-family:var(--texto);width:100%}
+  padding:12px;font-size:16px;font-family:var(--texto);width:100%}
 .marcador{display:flex;align-items:center;gap:10px}
 .marcador input{text-align:center;font-family:var(--display);font-size:20px}
 .marcador span{color:var(--tenue)}
@@ -203,8 +203,8 @@ input[type=text],input[type=number],input[type=password]{
 .aviso.err{background:rgba(255,107,91,.13);color:var(--brasa)}
 .aviso.ok{background:rgba(95,224,180,.12);color:var(--menta)}
 textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
-  color:var(--hueso);padding:11px 12px;font-size:11.5px;width:100%;resize:vertical;
-  font-family:ui-monospace,Menlo,Consolas,monospace;line-height:1.5}
+  color:var(--hueso);padding:12px;font-size:16px;width:100%;resize:vertical;
+  font-family:ui-monospace,Menlo,Consolas,monospace;line-height:1.45}
 .aviso b{font-weight:700}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;opacity:.85;
   word-break:break-word}
@@ -253,9 +253,12 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
 
 /* ---------- borrar una fecha ---------- */
 .fecha .top .der{display:flex;align-items:center;gap:9px}
-.tacho{width:32px;height:32px;margin:-6px 0;flex:0 0 auto;border-radius:9px;
+.tacho{position:relative;width:32px;height:32px;margin:-6px 0;flex:0 0 auto;border-radius:9px;
   border:1px solid var(--linea);background:var(--alto);color:var(--tenue);cursor:pointer;
   display:flex;align-items:center;justify-content:center}
+/* el ícono mide 32 pero el dedo apunta a 48: el click igual es del botón */
+.tacho::after{content:"";position:absolute;inset:-8px}
+.tacho svg{pointer-events:none}
 .tacho:active{background:rgba(255,107,91,.16);border-color:rgba(255,107,91,.5);
   color:var(--brasa)}
 .fecha .borrar{display:flex;align-items:center;gap:8px;margin-top:11px}
@@ -268,7 +271,9 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
 
 /* ---------- sorteo de capitanes ---------- */
 .chip.si{background:var(--alto);border-color:var(--tenue);color:var(--hueso)}
-.chip .x{margin-left:5px;font-weight:700;color:var(--tenue)}
+.chip{position:relative}
+.chip .x{position:relative;margin-left:6px;font-weight:700;font-size:15px;color:var(--tenue)}
+.chip .x::after{content:"";position:absolute;inset:-8px -6px}
 .chip.quieto{cursor:default;opacity:.65}
 .sumar{display:flex;gap:8px;margin-top:12px}
 .sumar input{flex:1;min-width:0}

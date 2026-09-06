@@ -565,7 +565,11 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
 });
 
 document.addEventListener("click", async e => {
-  const t = e.target;
+  // El dedo cae donde cae: sobre el svg del tacho, sobre la × de un chip, sobre
+  // el texto de un botón. Subimos al elemento que lleva la acción antes de
+  // decidir nada, porque e.target solo por casualidad es el botón.
+  const t = e.target.closest("button, [data-quitar]");
+  if(!t) return;
 
   if(t.id === "btnAbrir"){
     const v = document.getElementById("clave").value;
