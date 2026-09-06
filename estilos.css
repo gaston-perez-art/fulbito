@@ -1,0 +1,154 @@
+:root{
+  --noche:#141029;
+  --piso:#1B1638;
+  --alto:#241E48;
+  --linea:#332B5E;
+  --hueso:#F3EDE2;
+  --tenue:#9089B4;
+  --reflector:#FFB627;
+  --menta:#5FE0B4;
+  --brasa:#FF6B5B;
+  --display:'Archivo Black','Arial Black','Helvetica Neue',Impact,sans-serif;
+  --texto:'Archivo','Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--noche);color:var(--hueso);font-family:var(--texto);
+     font-size:15px;line-height:1.45;padding-bottom:40px}
+.wrap{max-width:620px;margin:0 auto}
+
+/* ---------- cabecera: cancha bajo reflectores ---------- */
+header{position:relative;overflow:hidden;padding:22px 18px 20px;
+  background:
+    repeating-linear-gradient(100deg, rgba(255,255,255,.022) 0 26px, transparent 26px 52px),
+    radial-gradient(120% 90% at 50% -25%, rgba(255,182,39,.30) 0%, rgba(255,182,39,.06) 42%, transparent 70%),
+    linear-gradient(180deg,#1D1740 0%,#141029 100%);
+  border-bottom:1px solid var(--linea)}
+.marca{display:flex;align-items:center;gap:13px}
+.escudo{flex:0 0 auto}
+.marca h1{font-family:var(--display);font-size:29px;line-height:.92;margin:0;
+  letter-spacing:-.02em;text-transform:uppercase}
+.marca .sub{color:var(--reflector);font-size:11.5px;font-weight:600;
+  letter-spacing:.16em;text-transform:uppercase;margin-top:5px}
+.avance{display:flex;align-items:baseline;gap:9px;margin-top:16px}
+.avance b{font-family:var(--display);font-size:30px;line-height:1}
+.avance span{color:var(--tenue);font-size:12.5px}
+.barra{display:flex;gap:3px;margin-top:9px}
+.barra i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.10)}
+.barra i.on{background:var(--reflector)}
+
+/* ---------- navegación ---------- */
+nav{display:flex;gap:2px;padding:0 12px;background:var(--piso);
+    border-bottom:1px solid var(--linea);position:sticky;top:0;z-index:20}
+nav button{flex:1;background:none;border:0;color:var(--tenue);font-family:var(--texto);
+  font-weight:600;font-size:12.5px;padding:13px 2px 11px;cursor:pointer;
+  border-bottom:2px solid transparent}
+nav button.on{color:var(--hueso);border-bottom-color:var(--reflector)}
+nav .llave{flex:0 0 42px}
+
+main{padding:16px 12px 0}
+section{display:none}
+section.on{display:block}
+
+/* ---------- puntero ---------- */
+.puntero{position:relative;border-radius:14px;padding:16px 112px 16px 18px;margin-bottom:16px;
+  background:linear-gradient(135deg,#3A2C0C 0%,#241E48 62%);
+  border:1px solid rgba(255,182,39,.34);overflow:hidden}
+.puntero .rot{color:var(--reflector);font-size:10.5px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase}
+.puntero .nom{font-family:var(--display);font-size:31px;line-height:1.05;margin:5px 0 3px;
+  text-transform:uppercase;letter-spacing:-.02em}
+.puntero .det{color:var(--tenue);font-size:12.5px}
+.puntero .pts{position:absolute;right:16px;top:50%;transform:translateY(-50%);text-align:right}
+.puntero .pts b{display:block;font-family:var(--display);font-size:44px;line-height:.9;
+  color:var(--reflector)}
+.puntero .pts span{font-size:10px;letter-spacing:.16em;color:var(--tenue);text-transform:uppercase}
+
+/* ---------- tablas ---------- */
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+thead th{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--tenue);
+  text-transform:uppercase;text-align:center;padding:0 0 9px;border-bottom:1px solid var(--linea)}
+thead th:nth-child(2){text-align:left}
+tbody td{padding:11px 0;text-align:center;font-size:13.5px;
+  border-bottom:1px solid rgba(255,255,255,.05)}
+tbody td:nth-child(2){text-align:left;font-weight:600;font-size:14.5px}
+tbody tr.zapatero td{opacity:.45}
+.pos{font-family:var(--display);font-size:15px;color:var(--tenue);width:30px}
+tr.p1 .pos{color:var(--reflector)}
+tr.p2 .pos,tr.p3 .pos{color:var(--hueso)}
+.col-pts{font-family:var(--display);font-size:16px;width:42px}
+tr.p1 .col-pts{color:var(--reflector)}
+.dif-pos{color:var(--menta)}
+.dif-neg{color:var(--brasa)}
+.nota{color:var(--tenue);font-size:11.5px;margin:12px 2px 0;line-height:1.5}
+.hint{color:var(--tenue);font-size:12px;margin:-2px 0 9px;line-height:1.45}
+
+/* ---------- goleadores ---------- */
+.gol{display:flex;align-items:center;gap:12px;padding:12px 0;
+  border-bottom:1px solid rgba(255,255,255,.05)}
+.gol .n{font-family:var(--display);font-size:15px;color:var(--tenue);width:26px}
+.gol .nm{flex:1;font-weight:600;font-size:15px}
+.gol .bar{flex:0 0 82px;height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.gol .bar i{display:block;height:100%;background:var(--reflector)}
+.gol .c{font-family:var(--display);font-size:19px;width:34px;text-align:right}
+.gol:first-child .c{color:var(--reflector)}
+
+/* ---------- fechas ---------- */
+.fecha{background:var(--piso);border:1px solid var(--linea);border-radius:12px;
+  padding:14px 15px;margin-bottom:11px}
+.fecha .top{display:flex;justify-content:space-between;align-items:center;
+  color:var(--tenue);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+.duelo{display:flex;align-items:center;gap:12px;margin:11px 0 4px}
+.duelo .lado{flex:1;font-size:13px;line-height:1.5}
+.duelo .lado.der{text-align:right}
+.duelo .lado b{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--tenue);margin-bottom:3px}
+.duelo .res{font-family:var(--display);font-size:24px;letter-spacing:.02em;white-space:nowrap}
+.gana{color:var(--reflector)}
+.fecha .anot{color:var(--tenue);font-size:12px;margin-top:9px;
+  border-top:1px solid rgba(255,255,255,.06);padding-top:9px}
+
+/* ---------- reglas ---------- */
+.regla{display:flex;gap:13px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.regla .n{font-family:var(--display);font-size:14px;color:var(--reflector);flex:0 0 22px}
+.regla p{margin:0;font-size:14px;line-height:1.55}
+.regla p b{display:block;margin-bottom:2px}
+.regla small{color:var(--tenue);font-size:12px}
+
+/* ---------- carga ---------- */
+.campo{margin-bottom:16px}
+.campo>label{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--tenue);margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--linea);background:var(--piso);color:var(--tenue);
+  border-radius:20px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;
+  font-family:var(--texto)}
+.chip.a{background:rgba(255,182,39,.15);border-color:var(--reflector);color:var(--reflector)}
+.chip.b{background:rgba(95,224,180,.13);border-color:var(--menta);color:var(--menta)}
+input[type=text],input[type=number],input[type=password]{
+  background:var(--piso);border:1px solid var(--linea);border-radius:9px;color:var(--hueso);
+  padding:11px 12px;font-size:15px;font-family:var(--texto);width:100%}
+.marcador{display:flex;align-items:center;gap:10px}
+.marcador input{text-align:center;font-family:var(--display);font-size:20px}
+.marcador span{color:var(--tenue)}
+.anotador{display:flex;align-items:center;gap:10px;padding:8px 0}
+.anotador .nm{flex:1;font-size:14px;font-weight:600}
+.anotador button{width:32px;height:32px;border-radius:8px;border:1px solid var(--linea);
+  background:var(--piso);color:var(--hueso);font-size:17px;cursor:pointer;line-height:1}
+.anotador .v{width:24px;text-align:center;font-family:var(--display);font-size:16px}
+.primario{width:100%;background:var(--reflector);color:#1A1204;border:0;border-radius:11px;
+  padding:15px;font-family:var(--display);font-size:15px;text-transform:uppercase;
+  letter-spacing:.04em;cursor:pointer;margin-top:6px}
+.primario:disabled{opacity:.4}
+.secundario{width:100%;background:none;border:1px solid var(--linea);color:var(--tenue);
+  border-radius:11px;padding:12px;font-family:var(--texto);font-size:13px;font-weight:600;
+  cursor:pointer;margin-top:10px}
+.aviso{border-radius:10px;padding:11px 13px;font-size:13px;margin-bottom:14px}
+.aviso.err{background:rgba(255,107,91,.13);color:var(--brasa)}
+.aviso.ok{background:rgba(95,224,180,.12);color:var(--menta)}
+textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
+  color:var(--hueso);padding:11px 12px;font-size:11.5px;width:100%;resize:vertical;
+  font-family:ui-monospace,Menlo,Consolas,monospace;line-height:1.5}
+.aviso b{font-weight:700}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;opacity:.85;
+  word-break:break-word}
+.vacio{text-align:center;color:var(--tenue);font-size:14px;padding:40px 20px;line-height:1.6}

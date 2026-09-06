@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apertura 2026 · Fútbol en Familia</title>
+<meta name="theme-color" content="#141029">
+<meta name="description" content="Tabla de posiciones y goleadores del Torneo Apertura 2026 de Fútbol en Familia.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 46 46'><circle cx='23' cy='23' r='21' fill='%23141029'/><path d='M23 12.5 L29.3 17 L26.9 24.4 H19.1 L16.7 17 Z' fill='%23FFB627'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="marca">
+      <svg class="escudo" width="46" height="46" viewBox="0 0 46 46" aria-hidden="true">
+        <circle cx="23" cy="23" r="21.5" fill="none" stroke="#FFB627" stroke-width="1.6"/>
+        <circle cx="23" cy="23" r="17" fill="rgba(255,182,39,.12)"/>
+        <path d="M23 12.5 L29.3 17 L26.9 24.4 H19.1 L16.7 17 Z" fill="#FFB627"/>
+        <text x="23" y="34.5" text-anchor="middle" fill="#F3EDE2"
+              font-family="Archivo Black, Arial Black, sans-serif" font-size="8.5"
+              letter-spacing="1.2">FEF</text>
+      </svg>
+      <div>
+        <h1>Apertura<br>2026</h1>
+        <div class="sub">Fútbol en Familia</div>
+      </div>
+    </div>
+    <div class="avance">
+      <b id="hFecha">0</b><span id="hTexto">fechas jugadas de 12</span>
+    </div>
+    <div class="barra" id="hBarra"></div>
+  </header>
+
+  <nav>
+    <button class="on" data-v="tabla">Posiciones</button>
+    <button data-v="goles">Goleadores</button>
+    <button data-v="fechas">Fechas</button>
+    <button data-v="reglas">Reglas</button>
+    <button class="llave" data-v="carga" title="Cargar fecha">🔒</button>
+  </nav>
+
+  <main>
+    <section id="v-tabla" class="on"></section>
+    <section id="v-goles"></section>
+    <section id="v-fechas"></section>
+    <section id="v-reglas"></section>
+    <section id="v-carga"></section>
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
