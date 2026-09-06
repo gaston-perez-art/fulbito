@@ -12,9 +12,20 @@
   --texto:'Archivo','Helvetica Neue',Arial,sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--noche);color:var(--hueso);font-family:var(--texto);
-     font-size:15px;line-height:1.45;padding-bottom:40px}
+     font-size:15px;line-height:1.45;overscroll-behavior-y:contain;
+     padding-bottom:calc(40px + env(safe-area-inset-bottom))}
 .wrap{max-width:620px;margin:0 auto}
+button,input,textarea{font-family:inherit}
+button{touch-action:manipulation}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--tenue);outline-offset:2px;border-radius:8px}
+@media (prefers-reduced-motion:no-preference){
+  .chip,.primario,.secundario,.anotador button,nav button{
+    transition:transform .12s ease,background .16s ease,border-color .16s ease,color .16s ease}
+  .chip:active,.primario:active,.secundario:active,.anotador button:active{transform:scale(.96)}
+}
 
 /* ---------- cabecera: cancha bajo reflectores ---------- */
 header{position:relative;overflow:hidden;padding:22px 18px 20px;
@@ -37,59 +48,87 @@ header{position:relative;overflow:hidden;padding:22px 18px 20px;
 .barra i.on{background:var(--reflector)}
 
 /* ---------- navegación ---------- */
-nav{display:flex;gap:2px;padding:0 12px;background:var(--piso);
+nav{display:flex;gap:2px;padding:0 8px;background:rgba(27,22,56,.92);
+    -webkit-backdrop-filter:saturate(1.3) blur(12px);backdrop-filter:saturate(1.3) blur(12px);
     border-bottom:1px solid var(--linea);position:sticky;top:0;z-index:20}
 nav button{flex:1;background:none;border:0;color:var(--tenue);font-family:var(--texto);
-  font-weight:600;font-size:12.5px;padding:13px 2px 11px;cursor:pointer;
+  font-weight:600;font-size:12.5px;padding:14px 2px 12px;cursor:pointer;
   border-bottom:2px solid transparent}
 nav button.on{color:var(--hueso);border-bottom-color:var(--reflector)}
 nav .llave{flex:0 0 42px}
 
-main{padding:16px 12px 0}
+main{padding:18px 14px 0}
 section{display:none}
 section.on{display:block}
 
 /* ---------- puntero ---------- */
-.puntero{position:relative;border-radius:14px;padding:16px 112px 16px 18px;margin-bottom:16px;
+.puntero{display:flex;align-items:center;gap:14px;border-radius:16px;padding:15px 16px;
+  margin-bottom:18px;overflow:hidden;
   background:linear-gradient(135deg,#3A2C0C 0%,#241E48 62%);
-  border:1px solid rgba(255,182,39,.34);overflow:hidden}
+  border:1px solid rgba(255,182,39,.34)}
+.puntero .caras{display:flex;flex:0 0 auto}
+.puntero .caras .av{width:46px;height:46px;font-size:18px}
+.puntero.multi .caras .av{width:38px;height:38px;font-size:14px;margin-right:-13px;
+  box-shadow:0 0 0 2px #2E2450}
+.puntero.multi .caras .av:last-child{margin-right:0}
+.puntero .av.mas{background:rgba(255,255,255,.10);color:var(--tenue);font-size:12px}
+.puntero .txt{flex:1;min-width:0}
 .puntero .rot{color:var(--reflector);font-size:10.5px;font-weight:700;
-  letter-spacing:.18em;text-transform:uppercase}
-.puntero .nom{font-family:var(--display);font-size:31px;line-height:1.05;margin:5px 0 3px;
+  letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.puntero .nom{font-family:var(--display);font-size:27px;line-height:1.05;margin:4px 0 3px;
   text-transform:uppercase;letter-spacing:-.02em}
-.puntero .det{color:var(--tenue);font-size:12.5px}
-.puntero .pts{position:absolute;right:16px;top:50%;transform:translateY(-50%);text-align:right}
-.puntero .pts b{display:block;font-family:var(--display);font-size:44px;line-height:.9;
+.puntero.multi .nom{font-size:19px;white-space:nowrap}
+.puntero .det{color:var(--tenue);font-size:12px;line-height:1.4}
+.puntero.multi .det{font-size:11.5px}
+.puntero .pts{flex:0 0 auto;text-align:right}
+.puntero .pts b{display:block;font-family:var(--display);font-size:40px;line-height:.9;
   color:var(--reflector)}
-.puntero .pts span{font-size:10px;letter-spacing:.16em;color:var(--tenue);text-transform:uppercase}
+.puntero .pts span{font-size:9.5px;letter-spacing:.14em;color:var(--tenue);text-transform:uppercase}
 
-/* ---------- tablas ---------- */
-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-thead th{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--tenue);
-  text-transform:uppercase;text-align:center;padding:0 0 9px;border-bottom:1px solid var(--linea)}
-thead th:nth-child(2){text-align:left}
-tbody td{padding:11px 0;text-align:center;font-size:13.5px;
-  border-bottom:1px solid rgba(255,255,255,.05)}
-tbody td:nth-child(2){text-align:left;font-weight:600;font-size:14.5px}
-tbody tr.zapatero td{opacity:.45}
-.pos{font-family:var(--display);font-size:15px;color:var(--tenue);width:30px}
-tr.p1 .pos{color:var(--reflector)}
-tr.p2 .pos,tr.p3 .pos{color:var(--hueso)}
-.col-pts{font-family:var(--display);font-size:16px;width:42px}
-tr.p1 .col-pts{color:var(--reflector)}
+/* ---------- avatares ---------- */
+.av{width:34px;height:34px;flex:0 0 auto;border-radius:50%;object-fit:cover;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:14px;color:rgba(243,237,226,.92);
+  border:1px solid rgba(255,255,255,.09);overflow:hidden;user-select:none}
+
+/* ---------- tabla de posiciones ---------- */
+.cab,.fila{display:grid;grid-template-columns:20px 34px minmax(0,1fr) 40px 32px;
+  gap:10px;align-items:center;font-variant-numeric:tabular-nums}
+.cab{padding:0 2px 10px;border-bottom:1px solid var(--linea);
+  font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--tenue);text-transform:uppercase}
+.cab .c-jug{grid-column:3}
+.cab span:not(.c-jug){text-align:right}
+.fila{padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.05)}
+.fila .rk{font-family:var(--display);font-size:14px;color:var(--tenue);text-align:center}
+.fila .id{min-width:0}
+.fila .nm{font-weight:600;font-size:15px;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila .mini{color:var(--tenue);font-size:11.5px;line-height:1.3;margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila .dif{text-align:right;font-size:13px}
+.fila .pt{text-align:right;font-family:var(--display);font-size:17px}
+.fila.lider .rk,.fila.lider .pt{color:var(--reflector)}
+.fila.zapatero{opacity:.42}
 .dif-pos{color:var(--menta)}
 .dif-neg{color:var(--brasa)}
-.nota{color:var(--tenue);font-size:11.5px;margin:12px 2px 0;line-height:1.5}
+.nota{color:var(--tenue);font-size:11.5px;margin:14px 2px 0;line-height:1.55}
 .hint{color:var(--tenue);font-size:12px;margin:-2px 0 9px;line-height:1.45}
 
 /* ---------- goleadores ---------- */
-.gol{display:flex;align-items:center;gap:12px;padding:12px 0;
-  border-bottom:1px solid rgba(255,255,255,.05)}
-.gol .n{font-family:var(--display);font-size:15px;color:var(--tenue);width:26px}
-.gol .nm{flex:1;font-weight:600;font-size:15px}
-.gol .bar{flex:0 0 82px;height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
-.gol .bar i{display:block;height:100%;background:var(--reflector)}
-.gol .c{font-family:var(--display);font-size:19px;width:34px;text-align:right}
+.gol{display:grid;grid-template-columns:20px 34px minmax(0,1fr) 64px 30px;
+  gap:10px;align-items:center;padding:10px 2px;
+  border-bottom:1px solid rgba(255,255,255,.05);font-variant-numeric:tabular-nums}
+.gol .n{font-family:var(--display);font-size:14px;color:var(--tenue);text-align:center}
+.gol .id{min-width:0}
+.gol .nm{font-weight:600;font-size:15px;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gol .mini{color:var(--tenue);font-size:11.5px;line-height:1.3;margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gol .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.gol .bar i{display:block;height:100%;background:rgba(255,255,255,.28);border-radius:4px}
+.gol:first-child .bar i{background:var(--reflector)}
+.gol .c{font-family:var(--display);font-size:18px;text-align:right}
 .gol:first-child .c{color:var(--reflector)}
 
 /* ---------- fechas ---------- */
@@ -103,7 +142,8 @@ tr.p1 .col-pts{color:var(--reflector)}
 .duelo .lado b{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--tenue);margin-bottom:3px}
 .duelo .res{font-family:var(--display);font-size:24px;letter-spacing:.02em;white-space:nowrap}
-.gana{color:var(--reflector)}
+.res .pierde{color:var(--tenue)}
+.res .punto{color:var(--linea)}
 .fecha .anot{color:var(--tenue);font-size:12px;margin-top:9px;
   border-top:1px solid rgba(255,255,255,.06);padding-top:9px}
 
@@ -120,7 +160,7 @@ tr.p1 .col-pts{color:var(--reflector)}
   text-transform:uppercase;color:var(--tenue);margin-bottom:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1px solid var(--linea);background:var(--piso);color:var(--tenue);
-  border-radius:20px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;
+  border-radius:20px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;
   font-family:var(--texto)}
 .chip.a{background:rgba(255,182,39,.15);border-color:var(--reflector);color:var(--reflector)}
 .chip.b{background:rgba(95,224,180,.13);border-color:var(--menta);color:var(--menta)}
@@ -130,11 +170,16 @@ input[type=text],input[type=number],input[type=password]{
 .marcador{display:flex;align-items:center;gap:10px}
 .marcador input{text-align:center;font-family:var(--display);font-size:20px}
 .marcador span{color:var(--tenue)}
-.anotador{display:flex;align-items:center;gap:10px;padding:8px 0}
-.anotador .nm{flex:1;font-size:14px;font-weight:600}
-.anotador button{width:32px;height:32px;border-radius:8px;border:1px solid var(--linea);
-  background:var(--piso);color:var(--hueso);font-size:17px;cursor:pointer;line-height:1}
-.anotador .v{width:24px;text-align:center;font-family:var(--display);font-size:16px}
+.anotador{display:flex;align-items:center;gap:10px;padding:7px 0;
+  border-bottom:1px solid rgba(255,255,255,.05)}
+.anotador:last-child{border-bottom:0}
+.anotador .nm{flex:1;font-size:14.5px;font-weight:600;min-width:0}
+.anotador button{width:40px;height:40px;border-radius:11px;border:1px solid var(--linea);
+  background:var(--piso);color:var(--hueso);font-size:19px;cursor:pointer;line-height:1;
+  display:flex;align-items:center;justify-content:center}
+.anotador button:active{background:var(--alto)}
+.anotador .v{width:26px;text-align:center;font-family:var(--display);font-size:17px;
+  font-variant-numeric:tabular-nums}
 .primario{width:100%;background:var(--reflector);color:#1A1204;border:0;border-radius:11px;
   padding:15px;font-family:var(--display);font-size:15px;text-transform:uppercase;
   letter-spacing:.04em;cursor:pointer;margin-top:6px}
@@ -152,3 +197,19 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;opacity:.85;
   word-break:break-word}
 .vacio{text-align:center;color:var(--tenue);font-size:14px;padding:40px 20px;line-height:1.6}
+
+/* ---------- de tablet para arriba ---------- */
+@media (min-width:560px){
+  main{padding:22px 18px 0}
+  .cab,.fila{grid-template-columns:24px 40px minmax(0,1fr) 52px 44px;gap:14px}
+  .fila{padding:11px 2px}
+  .av{width:40px;height:40px;font-size:16px}
+  .fila .nm{font-size:16px}
+  .fila .mini{font-size:12px}
+  .fila .pt{font-size:19px}
+  .gol{grid-template-columns:24px 40px minmax(0,1fr) 110px 40px;gap:14px;padding:12px 2px}
+  .puntero{padding:18px 20px;gap:16px}
+  .puntero .caras .av{width:54px;height:54px;font-size:21px}
+  .puntero .nom{font-size:31px}
+  .puntero .pts b{font-size:44px}
+}

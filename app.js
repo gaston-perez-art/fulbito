@@ -1,7 +1,8 @@
 /* ====== configuración ====== */
 const TOTAL_FECHAS = 12;
-const FIJOS = ["Gastón","Darío","Bastián","Elián","Maxi","Santi","Aarón",
-               "Juli","Tiago","Eze","Andii","Gabi","Eric","Víctor"];
+const PLANTEL = window.JUGADORES || [];
+const FIJOS = PLANTEL.map(j => j.nombre);
+const FOTOS = Object.fromEntries(PLANTEL.filter(j => j.foto).map(j => [j.nombre, j.foto]));
 
 /* ====== estado ====== */
 let fechas = [];
@@ -68,6 +69,22 @@ async function reemplazarTodo(lista){
   return await rpc("reemplazar_todo", {p_clave:clave, p_fechas:lista});
 }
 
+/* ====== avatares ====== */
+// El tono sale del nombre pero queda encerrado en la familia fría de la paleta:
+// 14 avatares distintos que igual se leen como un solo sistema. Sin ámbar acá:
+// el ámbar es del puntero y del goleador, y de nadie más.
+function tono(n){
+  let h = 0;
+  for(const c of n) h = (h * 31 + c.codePointAt(0)) % 360;
+  return 231 + (h % 58);
+}
+function avatar(n){
+  const f = FOTOS[n];
+  if(f) return `<img class="av" src="${f}" alt="" loading="lazy" decoding="async">`;
+  return `<div class="av" style="background:hsl(${tono(n)} 27% 31%)" aria-hidden="true">${
+    [...n][0].toUpperCase()}</div>`;
+}
+
 /* ====== cálculo ====== */
 function tabla(){
   const t = {};
@@ -106,29 +123,56 @@ function vTabla(){
   const t = tabla();
   if(!fechas.length) return `<div class="vacio">Todavía no se jugó ninguna fecha.<br>
     La tabla arranca el sábado 12/09.</div>`;
+
+  // empatados en la punta: los que igualan al primero en toda la cadena de desempate
   const l = t[0];
-  const podio = `<div class="puntero">
-      <div class="rot">Puntero</div>
-      <div class="nom">${l.j}</div>
-      <div class="det">${l.g} ganados · ${l.e} empatados · ${l.p} perdidos · ${l.ef}% de efectividad</div>
-      <div class="pts"><b>${l.pts}</b><span>puntos</span></div>
+  const punta = t.filter(r => r.pj && r.pts === l.pts && r.dif === l.dif
+                           && r.gf === l.gf && r.g === l.g);
+  const solo = punta.length === 1;
+  const nombres = punta.map(r => r.j);
+  const podio = solo
+    ? `<div class="puntero">
+        <div class="caras">${avatar(l.j)}</div>
+        <div class="txt">
+          <div class="rot">Puntero</div>
+          <div class="nom">${l.j}</div>
+          <div class="det">${l.pj} ${l.pj === 1 ? "fecha" : "fechas"} · ${l.g}G ${l.e}E ${l.p}P · ${l.ef}% efectivo</div>
+        </div>
+        <div class="pts"><b>${l.pts}</b><span>puntos</span></div>
+      </div>`
+    : `<div class="puntero multi">
+        <div class="caras">${nombres.slice(0,2).map(avatar).join("")}${
+          nombres.length > 2 ? `<div class="av mas">+${nombres.length - 2}</div>` : ""}</div>
+        <div class="txt">
+          <div class="rot">Empatados en la punta</div>
+          <div class="nom">${nombres.length} jugadores</div>
+          <div class="det">${nombres.join(" · ")}</div>
+        </div>
+        <div class="pts"><b>${l.pts}</b><span>puntos</span></div>
+      </div>`;
+
+  const filas = t.map((r,i) => {
+    const mini = r.pj
+      ? `${r.pj} ${r.pj === 1 ? "fecha" : "fechas"} · ${r.g}G ${r.e}E ${r.p}P · ${r.gf}-${r.gc}`
+      : "todavía no jugó";
+    return `<div class="fila${solo && i === 0 ? " lider" : ""}${r.pj ? "" : " zapatero"}">
+      <div class="rk">${i+1}</div>
+      ${avatar(r.j)}
+      <div class="id"><div class="nm">${r.j}</div><div class="mini">${mini}</div></div>
+      <div class="dif ${r.dif>0?"dif-pos":r.dif<0?"dif-neg":""}">${r.dif>0?"+":""}${r.dif}</div>
+      <div class="pt">${r.pts}</div>
     </div>`;
-  const filas = t.map((r,i) => `
-    <tr class="p${i+1} ${r.pj ? "" : "zapatero"}">
-      <td class="pos">${i+1}</td>
-      <td>${r.j}</td>
-      <td>${r.pj}</td><td>${r.g}</td><td>${r.e}</td><td>${r.p}</td>
-      <td>${r.gf}</td><td>${r.gc}</td>
-      <td class="${r.dif>0?"dif-pos":r.dif<0?"dif-neg":""}">${r.dif>0?"+":""}${r.dif}</td>
-      <td class="col-pts">${r.pts}</td>
-    </tr>`).join("");
-  return podio + `<table>
-      <thead><tr><th></th><th>Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th>
-      <th>GF</th><th>GC</th><th>DIF</th><th>PTS</th></tr></thead>
-      <tbody>${filas}</tbody></table>
-    <p class="nota">GF y GC son los goles del equipo en el que jugaste esa fecha.
+  }).join("");
+
+  return podio + `<div class="tabla">
+      <div class="cab"><span class="c-jug">Jugador</span><span>Dif</span><span>Pts</span></div>
+      ${filas}
+    </div>
+    <p class="nota">La segunda línea de cada jugador son las fechas que jugó, cómo le fue
+      y los goles a favor y en contra del equipo en el que estuvo.
       No hay mínimo de fechas: campeón es el que más puntos suma.</p>`;
 }
+
 function vGoles(){
   if(cargando) return `<div class="vacio">Cargando…</div>`;
   const g = goleadores();
@@ -136,7 +180,10 @@ function vGoles(){
   const max = g[0].c;
   return g.map((x,i) => `<div class="gol">
       <div class="n">${i+1}</div>
-      <div class="nm">${x.n}</div>
+      ${avatar(x.n)}
+      <div class="id"><div class="nm">${x.n}</div>
+        <div class="mini">${x.pj} ${x.pj === 1 ? "fecha" : "fechas"} · ${
+          (x.c / Math.max(x.pj,1)).toFixed(1).replace(".",",")} por fecha</div></div>
       <div class="bar"><i style="width:${Math.round(x.c/max*100)}%"></i></div>
       <div class="c">${x.c}</div>
     </div>`).join("") +
@@ -154,9 +201,9 @@ function vFechas(){
       <div class="top"><span>Fecha ${f.n}</span><span>${f.dia||""}</span></div>
       <div class="duelo">
         <div class="lado"><b>Equipo A</b>${f.equipoA.join(", ")}</div>
-        <div class="res"><span class="${f.golesA>f.golesB?"gana":""}">${f.golesA}</span>
-          <span style="color:var(--tenue)">·</span>
-          <span class="${f.golesB>f.golesA?"gana":""}">${f.golesB}</span></div>
+        <div class="res"><span class="${f.golesA<f.golesB?"pierde":""}">${f.golesA}</span>
+          <span class="punto">·</span>
+          <span class="${f.golesB<f.golesA?"pierde":""}">${f.golesB}</span></div>
         <div class="lado der"><b>Equipo B</b>${f.equipoB.join(", ")}</div>
       </div>
       ${an ? `<div class="anot">Goles: ${an}</div>` : ""}
@@ -255,6 +302,17 @@ function pintar(){
       `<i class="${i < fechas.length ? "on" : ""}"></i>`).join("");
 }
 function verCarga(){ document.querySelector('nav [data-v="carga"]').click(); }
+// Repinta solo el formulario y deja el scroll donde estaba. Cambiar de pestaña
+// manda arriba de todo, y eso en medio de una carga es insoportable.
+function repintarCarga(){
+  const y = window.scrollY;
+  document.getElementById("v-carga").innerHTML = vCarga();
+  window.scrollTo(0, y);
+}
+function avisar(){
+  const a = document.querySelector("#v-carga .aviso.err");
+  if(a) a.scrollIntoView({block:"center", behavior:"smooth"});
+}
 
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button").forEach(x => x.classList.remove("on"));
@@ -287,14 +345,17 @@ document.addEventListener("click", async e => {
     else { delete form.equipos[j]; delete form.goleadores[j]; }
     form.golesA = document.getElementById("gA").value;
     form.golesB = document.getElementById("gB").value;
-    form.msg = null; pintar(); verCarga(); return;
+    form.msg = null; repintarCarga(); return;
   }
+  // Sumar o restar un gol no repinta nada: toca el número y listo. Es el gesto
+  // que más se repite en la noche y no puede mover la pantalla.
   if(t.dataset.g){
     const j = t.dataset.g;
-    form.goleadores[j] = Math.max(0, (form.goleadores[j]||0) + Number(t.dataset.d));
-    form.golesA = document.getElementById("gA").value;
-    form.golesB = document.getElementById("gB").value;
-    pintar(); verCarga(); return;
+    const v = Math.max(0, (form.goleadores[j]||0) + Number(t.dataset.d));
+    form.goleadores[j] = v;
+    const casilla = t.parentElement.querySelector(".v");
+    if(casilla) casilla.textContent = v;
+    return;
   }
   if(t.id === "btnGuardar"){
     const A = FIJOS.filter(j => form.equipos[j] === "a");
@@ -304,11 +365,11 @@ document.addEventListener("click", async e => {
     form.golesA = gA; form.golesB = gB;
     if(!A.length || !B.length){
       form.msg = {t:"err", x:"Faltan jugadores en alguno de los dos equipos."};
-      pintar(); verCarga(); return;
+      repintarCarga(); avisar(); return;
     }
     if(!Number.isInteger(gA) || !Number.isInteger(gB) || gA < 0 || gB < 0){
       form.msg = {t:"err", x:"Cargá el resultado con números."};
-      pintar(); verCarga(); return;
+      repintarCarga(); avisar(); return;
     }
     const gols = {};
     Object.entries(form.goleadores).forEach(([j,c]) => { if(c > 0) gols[j] = c; });
@@ -316,7 +377,7 @@ document.addEventListener("click", async e => {
     const sumB = B.reduce((s,j) => s + (gols[j]||0), 0);
     if(sumA > gA || sumB > gB){
       form.msg = {t:"err", x:"Hay más goleadores cargados que goles en el marcador."};
-      pintar(); verCarga(); return;
+      repintarCarga(); avisar(); return;
     }
     const hoy = new Date();
     const nueva = {equipoA:A, equipoB:B, golesA:gA, golesB:gB, goleadores:gols,
@@ -331,7 +392,7 @@ document.addEventListener("click", async e => {
       pintar(); document.querySelector('nav [data-v="tabla"]').click(); return;
     }catch(err){
       form.msg = {t:"err", x:"No se guardó: " + err.message + ". Nada se perdió, probá de nuevo."};
-      pintar(); verCarga(); return;
+      repintarCarga(); avisar(); return;
     }
   }
   if(t.id === "btnRestaurar"){
@@ -341,7 +402,7 @@ document.addEventListener("click", async e => {
       if(!Array.isArray(d)) throw new Error("formato");
     }catch(err){
       form.msg = {t:"err", x:"El respaldo no se pudo leer."};
-      pintar(); verCarga(); return;
+      repintarCarga(); avisar(); return;
     }
     t.disabled = true;
     try{

@@ -31,12 +31,25 @@ Sin build, sin dependencias, sin framework. Cuatro archivos:
 | `index.html`   | Estructura y cabecera                                   |
 | `estilos.css`  | Todo el diseño                                          |
 | `app.js`       | Cálculo de tabla y goleadores, vistas, capa de datos    |
+| `jugadores.js` | El plantel y las fotos                                  |
 | `config.js`    | URL y anon key del proyecto de Supabase                 |
 | `supabase.sql` | Esquema, RLS y funciones de carga                       |
 
 Los datos viven en Supabase y se leen por REST (`fetch` contra PostgREST), sin
 la librería `supabase-js`: son cuatro llamadas y no justifica sumar una
 dependencia a un sitio que se despliega copiando archivos.
+
+## Fotos de los jugadores
+
+El que no tiene foto muestra la inicial del nombre sobre un color derivado del
+nombre mismo, así que cada uno queda con el suyo y no cambia nunca. Para poner
+una foto de verdad: la imagen cuadrada en `fotos/`, y en `jugadores.js`
+
+```js
+{nombre:"Gastón", foto:"fotos/gaston.jpg"}
+```
+
+No hace falta que estén todas: conviven fotos e iniciales sin que se note.
 
 ## Levantarlo local
 
