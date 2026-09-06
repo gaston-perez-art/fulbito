@@ -44,11 +44,10 @@ revoke insert, update, delete on public.fechas from anon, authenticated;
 grant  select                  on public.fechas to   anon, authenticated;
 revoke all on public.torneo_config from anon, authenticated;
 
--- ---------- clave de carga ----------
--- CAMBIAR la clave acá antes de correr. Se guarda hasheada con bcrypt.
-insert into public.torneo_config (id, clave_hash)
-values (1, extensions.crypt('cambiar-esta-clave', extensions.gen_salt('bf')))
-on conflict (id) do update set clave_hash = excluded.clave_hash;
+-- La clave de carga NO se define acá: se pone en una segunda consulta, aparte,
+-- para que nunca pase por el repo. Ver el final de este archivo.
+-- Hasta que se defina, torneo_config está vacía y verificar_clave devuelve
+-- false para cualquier clave: nadie puede escribir.
 
 -- ---------- funciones ----------
 
@@ -170,3 +169,11 @@ grant execute on function public.borrar_ultima(text)                            
 grant execute on function public.reemplazar_todo(text, jsonb)                              to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ---------- clave de carga ----------
+-- Correr esto aparte, cambiando el texto entre comillas por la clave real.
+-- Sirve tanto para definirla la primera vez como para cambiarla después.
+--
+--   insert into public.torneo_config (id, clave_hash)
+--   values (1, extensions.crypt('la-clave-del-torneo', extensions.gen_salt('bf')))
+--   on conflict (id) do update set clave_hash = excluded.clave_hash;

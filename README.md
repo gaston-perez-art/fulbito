@@ -52,18 +52,20 @@ python3 -m http.server 8080
 ## Montar la base (una sola vez)
 
 1. Crear un proyecto en [supabase.com](https://supabase.com) (plan free).
-2. Abrir `supabase.sql`, cambiar `'cambiar-esta-clave'` por la clave de carga
-   real y correr el archivo entero en el **SQL Editor**.
-3. En *Project Settings → API* copiar la **Project URL** y la **anon public key**
+2. Correr `supabase.sql` entero en el **SQL Editor**. Tal cual está, sin editar nada.
+3. Definir la clave de carga con una segunda consulta, cambiando solo el texto
+   entre comillas. La misma consulta sirve para cambiarla más adelante:
+
+   ```sql
+   insert into public.torneo_config (id, clave_hash)
+   values (1, extensions.crypt('la-clave-del-torneo', extensions.gen_salt('bf')))
+   on conflict (id) do update set clave_hash = excluded.clave_hash;
+   ```
+
+   Hasta que se corra esto, nadie puede escribir: `verificar_clave` devuelve
+   false para cualquier clave.
+4. En *Project Settings → API* copiar la **Project URL** y la **anon public key**
    y pegarlas en `config.js`.
-
-Para cambiar la clave más adelante, correr solo esto en el SQL Editor:
-
-```sql
-update public.torneo_config
-set clave_hash = extensions.crypt('la-clave-nueva', extensions.gen_salt('bf'))
-where id = 1;
-```
 
 ### Por qué la anon key puede estar en un repo público
 
