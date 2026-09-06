@@ -12,6 +12,11 @@ let desbloqueado = false;
 let clave = "";                 // la que escribió el encargado; vive solo en memoria
 let form = null;
 let confirmar = null;           // número de fecha esperando confirmación de borrado
+let vinieron = [];              // los que confirmaron para hoy
+let invitados = [];             // nombres agregados a mano, fuera de los fijos
+let yaFueron = [];              // capitanes de rondas anteriores
+let caps = [];                  // los dos de esta ronda
+let sorteando = false;
 let conectado = false;
 let diag = "";                  // texto del último error real
 
@@ -80,6 +85,26 @@ async function guardarPozo(p){
 async function reemplazarTodo(lista){
   return await rpc("reemplazar_todo", {p_clave:clave, p_fechas:lista});
 }
+
+/* ====== el sorteo vive en este teléfono ====== */
+// No va a Supabase a propósito: el sorteo pasa a las 18 en la cancha, con los
+// pibes esperando, y pedir la clave ahí es fricción. El costo es que el
+// historial de capitanes es de este aparato.
+const LLAVE_LOCAL = "fulbito.sorteo";
+function leerLocal(){
+  try{
+    const d = JSON.parse(localStorage.getItem(LLAVE_LOCAL) || "{}");
+    vinieron  = Array.isArray(d.vinieron)  ? d.vinieron  : [];
+    invitados = Array.isArray(d.invitados) ? d.invitados : [];
+    yaFueron  = Array.isArray(d.yaFueron)  ? d.yaFueron  : [];
+  }catch(e){ /* modo incógnito, almacenamiento bloqueado: arranca limpio */ }
+}
+function guardarLocal(){
+  try{
+    localStorage.setItem(LLAVE_LOCAL, JSON.stringify({vinieron, invitados, yaFueron}));
+  }catch(e){ /* si no se puede guardar, el sorteo igual funciona en esta sesión */ }
+}
+function plantelDelDia(){ return FIJOS.concat(invitados); }
 
 /* ====== plata ====== */
 // 1.000 · 10.000 · 100.000, coma para los decimales. Es el formato de acá.
@@ -237,7 +262,9 @@ function vPozo(){
 
   return `<div class="pozo">
       <div class="brillo" aria-hidden="true"></div>
-      <div class="rot">💰 Pozo acumulado</div>
+      <div class="destello" aria-hidden="true"></div>
+      <div class="cara" aria-hidden="true">🤑</div>
+      <div class="rot">Pozo acumulado</div>
       <div class="monto">${plata(total)}</div>
       <div class="sub">${fechas.length} ${fechas.length === 1 ? "fecha" : "fechas"} ·
         ${pres} ${pres === 1 ? "presencia" : "presencias"} · ${plata(pozo.cuota)} cada una</div>
@@ -270,16 +297,23 @@ function vFechas(){
     const an = Object.entries(f.goleadores||{}).filter(([,c]) => c>0)
       .sort((a,b) => b[1]-a[1])
       .map(([n,c]) => c>1 ? `${n} (${c})` : n).join(" · ");
-    const pie = !desbloqueado ? ""
-      : confirmar === f.n
-        ? `<div class="borrar">
-             <span>Se van sus puntos y sus goles.</span>
-             <button class="no" data-cancelar="1">No</button>
-             <button class="si" data-borrar-ok="${f.n}">Borrar</button>
-           </div>`
-        : `<button class="quitar" data-borrar="${f.n}">Borrar esta fecha</button>`;
+    const tacho = desbloqueado
+      ? `<button class="tacho" data-borrar="${f.n}" aria-label="Borrar la fecha ${f.n}">
+          <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path
+            d="M3.5 5.5h13M8 5.5V4.2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.3M5.6 5.5l.7 10.1a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.7-10.1"
+            fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+         </button>`
+      : "";
+    const pie = confirmar === f.n
+      ? `<div class="borrar">
+           <span>Se van sus puntos y sus goles.</span>
+           <button class="no" data-cancelar="1">No</button>
+           <button class="si" data-borrar-ok="${f.n}">Borrar</button>
+         </div>`
+      : "";
     return `<div class="fecha">
-      <div class="top"><span>Fecha ${f.n}</span><span>${f.dia||""}</span></div>
+      <div class="top"><span>Fecha ${f.n}</span>
+        <span class="der">${f.dia||""}${tacho}</span></div>
       <div class="duelo">
         <div class="lado"><b>Equipo A</b>${f.equipoA.join(", ")}</div>
         <div class="res"><span class="${f.golesA<f.golesB?"pierde":""}">${f.golesA}</span>
@@ -291,6 +325,66 @@ function vFechas(){
       ${pie}
     </div>`;
   }).join("");
+}
+
+function vSorteo(){
+  const plantel = plantelDelDia();
+  const chips = plantel.map(j => {
+    const si = vinieron.includes(j);
+    const inv = invitados.includes(j);
+    return `<button class="chip ${si ? "si" : ""}" data-vino="${j}">${j}${
+      inv ? ` <span class="x" data-quitar="${j}">×</span>` : ""}</button>`;
+  }).join("");
+
+  const listos = vinieron.length;
+  const pendientes = vinieron.filter(n => !yaFueron.includes(n) && !caps.includes(n));
+  const puede = listos >= 2 && caps.length < 2 && !sorteando;
+  const rotulo = caps.length === 0 ? "Sortear el primer capitán"
+                                   : "Sortear el segundo capitán";
+
+  const casilla = (i) => {
+    const n = caps[i];
+    return `<div class="capitan ${n ? "listo" : ""}">
+      <div class="rot">Capitán ${i+1}${i === 0 ? " · elige primero" : ""}</div>
+      <div class="cara">${n ? avatar(n) : `<div class="av vacia">?</div>`}</div>
+      <div class="nom">${n || "—"}</div>
+    </div>`;
+  };
+
+  return `<div class="campo">
+      <label>Quiénes vinieron · ${listos} ${listos === 1 ? "confirmado" : "confirmados"}</label>
+      <p class="hint">Tocá a los que están. Después sorteás.</p>
+      <div class="chips" id="vinieron">${chips}</div>
+      <div class="sumar">
+        <input type="text" id="nuevoInv" placeholder="Sumar a alguien que no está en la lista"
+               autocomplete="off">
+        <button class="secundario" id="btnInvitado">Sumar</button>
+      </div>
+    </div>
+
+    <div class="duplaCap">${casilla(0)}${casilla(1)}</div>
+
+    ${caps.length === 2
+      ? `<button class="primario" id="btnOtraRonda">Sortear otra vez</button>`
+      : `<button class="primario" id="btnSortear" ${puede ? "" : "disabled"}>${rotulo}</button>
+         ${caps.length ? `<button class="secundario" id="btnOtraRonda">Empezar de nuevo</button>` : ""}`}
+    <p class="hint" style="margin-top:14px">${
+      caps.length === 2
+        ? `${caps[0]} elige primero. El armado de los equipos sigue afuera de la app.`
+        : listos < 2
+          ? "Marcá al menos dos jugadores para poder sortear."
+          : `Salen de los ${pendientes.length} que todavía no fueron capitanes.`}</p>
+
+    <div class="campo" style="margin-top:26px">
+      <label>Ya fueron capitanes</label>
+      ${yaFueron.length
+        ? `<div class="chips">${yaFueron.map(n => `<span class="chip quieto">${n}</span>`).join("")}</div>
+           <button class="secundario" id="btnReiniciar">Reiniciar la rueda de capitanes</button>`
+        : `<p class="hint">Todavía nadie. A medida que salgan, quedan afuera del
+            sorteo hasta que hayan pasado todos.</p>`}
+      <p class="hint" style="margin-top:12px">Esta lista y los confirmados viven en este
+        teléfono, no en la base. Si abrís el sitio en otro aparato, arranca de cero.</p>
+    </div>`;
 }
 
 function vReglas(){
@@ -361,7 +455,7 @@ function vCarga(){
     ${sel.length ? `<div class="campo"><label>Goleadores</label>${anot}</div>` : ""}
     <button class="primario" id="btnGuardar">Guardar fecha ${n}</button>
     <p class="hint" style="margin-top:12px">Para borrar una fecha ya cargada, andá a
-      Fechas: ahora cada una tiene su botón.</p>
+      Fechas y tocá el tachito de su tarjeta.</p>
 
     <div class="campo" style="margin-top:26px">
       <label>El pozo</label>
@@ -394,6 +488,7 @@ function pintar(){
   document.getElementById("v-goles").innerHTML  = vGoles();
   document.getElementById("v-fechas").innerHTML = vFechas();
   document.getElementById("v-pozo").innerHTML   = vPozo();
+  document.getElementById("v-sorteo").innerHTML = vSorteo();
   document.getElementById("v-reglas").innerHTML = vReglas();
   document.getElementById("v-carga").innerHTML  = vCarga();
   document.getElementById("hFecha").textContent = fechas.length;
@@ -412,6 +507,49 @@ function repintar(id, vista){
   window.scrollTo(0, y);
 }
 function repintarCarga(){ repintar("v-carga", vCarga); }
+const quieto = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Las dos animaciones llevan red: si requestAnimationFrame no corre —pestaña en
+// segundo plano, ahorro de batería— un temporizador las cierra igual. Ninguna
+// animación puede quedarse con el número final ni dejar un botón trabado.
+function animarPozo(){
+  const el = document.querySelector("#v-pozo .monto");
+  if(!el) return;
+  const total = totalPozo();
+  const fin = () => { el.textContent = plata(total); };
+  if(quieto() || total <= 0){ fin(); return; }
+  const dur = 1100, t0 = performance.now();
+  let vivo = true;
+  const red = setTimeout(() => { vivo = false; fin(); }, dur + 500);
+  (function paso(t){
+    if(!vivo) return;
+    const p = Math.min(1, (t - t0) / dur);
+    el.textContent = plata(Math.round(total * (1 - Math.pow(1 - p, 3))));
+    if(p < 1) requestAnimationFrame(paso);
+    else { clearTimeout(red); vivo = false; fin(); }
+  })(t0);
+}
+
+// Los nombres pasan cada vez más lento hasta frenar en el que salió.
+function ruleta(slot, pool, elegido){
+  return new Promise(listo => {
+    const fin = () => { slot.textContent = elegido; listo(); };
+    if(quieto() || pool.length < 2) return fin();
+    const t0 = performance.now(), dur = 1400;
+    let ultimo = 0, vivo = true;
+    const red = setTimeout(() => { vivo = false; fin(); }, dur + 500);
+    (function paso(t){
+      if(!vivo) return;
+      const p = (t - t0) / dur;
+      if(p >= 1){ clearTimeout(red); vivo = false; return fin(); }
+      if(t - ultimo > 55 + 260 * p * p){
+        slot.textContent = pool[Math.floor(Math.random() * pool.length)];
+        ultimo = t;
+      }
+      requestAnimationFrame(paso);
+    })(t0);
+  });
+}
 function avisar(){
   const a = document.querySelector("#v-carga .aviso.err");
   if(a) a.scrollIntoView({block:"center", behavior:"smooth"});
@@ -423,6 +561,7 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   b.classList.add("on");
   document.getElementById("v-" + b.dataset.v).classList.add("on");
   window.scrollTo({top:0});
+  if(b.dataset.v === "pozo") animarPozo();
 });
 
 document.addEventListener("click", async e => {
@@ -440,6 +579,56 @@ document.addEventListener("click", async e => {
       form.msg = "No se pudo validar la clave: " + err.message;
     }
     pintar(); verCarga(); return;
+  }
+
+  /* --- sorteo de capitanes --- */
+  if(t.dataset.quitar){                       // sacar un invitado de la lista
+    const j = t.dataset.quitar;
+    invitados = invitados.filter(n => n !== j);
+    vinieron  = vinieron.filter(n => n !== j);
+    yaFueron  = yaFueron.filter(n => n !== j);
+    caps      = caps.filter(n => n !== j);
+    guardarLocal(); repintar("v-sorteo", vSorteo); return;
+  }
+  if(t.dataset.vino){
+    const j = t.dataset.vino;
+    vinieron = vinieron.includes(j) ? vinieron.filter(n => n !== j) : vinieron.concat(j);
+    guardarLocal(); repintar("v-sorteo", vSorteo); return;
+  }
+  if(t.id === "btnInvitado"){
+    const campo = document.getElementById("nuevoInv");
+    const nombre = campo.value.trim();
+    if(!nombre) return;
+    if(!plantelDelDia().includes(nombre)) invitados = invitados.concat(nombre);
+    if(!vinieron.includes(nombre)) vinieron = vinieron.concat(nombre);
+    campo.value = "";
+    guardarLocal(); repintar("v-sorteo", vSorteo); return;
+  }
+  if(t.id === "btnOtraRonda"){
+    caps = []; repintar("v-sorteo", vSorteo); return;
+  }
+  if(t.id === "btnReiniciar"){
+    yaFueron = []; caps = [];
+    guardarLocal(); repintar("v-sorteo", vSorteo); return;
+  }
+  if(t.id === "btnSortear"){
+    if(sorteando || caps.length >= 2) return;
+    const i = caps.length;
+    let pool = vinieron.filter(n => !yaFueron.includes(n) && !caps.includes(n));
+    if(!pool.length){                         // se agotó la rueda: arranca de nuevo
+      yaFueron = caps.slice();
+      pool = vinieron.filter(n => !caps.includes(n));
+    }
+    if(!pool.length) return;
+    const elegido = pool[Math.floor(Math.random() * pool.length)];
+    sorteando = true;
+    t.disabled = true; t.textContent = "Sorteando…";
+    const slot = document.querySelectorAll("#v-sorteo .capitan .nom")[i];
+    await ruleta(slot, pool, elegido);
+    caps = caps.concat(elegido);
+    yaFueron = yaFueron.concat(elegido);
+    sorteando = false;
+    guardarLocal(); repintar("v-sorteo", vSorteo); return;
   }
 
   /* --- borrar una fecha, desde la pestaña Fechas --- */
@@ -571,5 +760,6 @@ function alertaFechas(texto){
   s.insertAdjacentHTML("afterbegin", `<div class="aviso err">${texto}</div>`);
 }
 
+leerLocal();
 pintar();
 leer();

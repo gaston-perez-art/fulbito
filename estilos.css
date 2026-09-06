@@ -217,8 +217,16 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
   border:1px solid rgba(255,182,39,.42)}
 .pozo .brillo{position:absolute;inset:-60% -20% auto;height:200%;pointer-events:none;
   background:radial-gradient(58% 46% at 50% 30%, rgba(255,182,39,.32) 0%, transparent 72%)}
+.pozo .cara{position:relative;font-size:36px;line-height:1;margin-bottom:4px;
+  filter:drop-shadow(0 7px 16px rgba(255,182,39,.32))}
 .pozo .rot{position:relative;color:var(--reflector);font-size:11px;font-weight:700;
   letter-spacing:.16em;text-transform:uppercase}
+/* una pasada de luz cada tanto, como el brillo sobre un billete nuevo */
+.pozo .destello{position:absolute;top:-60%;bottom:-60%;width:34%;pointer-events:none;
+  background:linear-gradient(100deg,transparent 0%,rgba(255,255,255,.13) 50%,transparent 100%);
+  transform:skewX(-14deg);animation:pasada 6s ease-in-out infinite}
+@keyframes pasada{0%{left:-45%}55%,100%{left:135%}}
+@media (prefers-reduced-motion:reduce){.pozo .destello{display:none}}
 .pozo .monto{position:relative;font-family:var(--display);font-size:44px;line-height:1.05;
   margin:9px 0 7px;color:var(--reflector);letter-spacing:-.02em;
   font-variant-numeric:tabular-nums;text-shadow:0 0 28px rgba(255,182,39,.38)}
@@ -244,10 +252,12 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
 .desglose .ajuste .q{color:var(--tenue)}
 
 /* ---------- borrar una fecha ---------- */
-.fecha .quitar{width:100%;margin-top:11px;background:none;border:1px solid var(--linea);
-  color:var(--tenue);border-radius:10px;padding:10px;font-size:12.5px;font-weight:600;
-  cursor:pointer;font-family:var(--texto)}
-.fecha .quitar:active{background:var(--alto)}
+.fecha .top .der{display:flex;align-items:center;gap:9px}
+.tacho{width:32px;height:32px;margin:-6px 0;flex:0 0 auto;border-radius:9px;
+  border:1px solid var(--linea);background:var(--alto);color:var(--tenue);cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.tacho:active{background:rgba(255,107,91,.16);border-color:rgba(255,107,91,.5);
+  color:var(--brasa)}
 .fecha .borrar{display:flex;align-items:center;gap:8px;margin-top:11px}
 .fecha .borrar span{flex:1;color:var(--brasa);font-size:12px;line-height:1.35}
 .fecha .borrar button{border-radius:10px;padding:10px 14px;font-size:12.5px;font-weight:600;
@@ -255,6 +265,28 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
   background:var(--piso);color:var(--tenue)}
 .fecha .borrar .si{background:rgba(255,107,91,.16);border-color:rgba(255,107,91,.5);
   color:var(--brasa)}
+
+/* ---------- sorteo de capitanes ---------- */
+.chip.si{background:var(--alto);border-color:var(--tenue);color:var(--hueso)}
+.chip .x{margin-left:5px;font-weight:700;color:var(--tenue)}
+.chip.quieto{cursor:default;opacity:.65}
+.sumar{display:flex;gap:8px;margin-top:12px}
+.sumar input{flex:1;min-width:0}
+.sumar .secundario{flex:0 0 auto;width:auto;margin-top:0;padding:12px 17px}
+
+.duplaCap{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 4px}
+.capitan{background:var(--piso);border:1px solid var(--linea);border-radius:15px;
+  padding:14px 12px 15px;text-align:center}
+.capitan.listo{background:var(--alto);border-color:#4A4177}
+.capitan .rot{color:var(--tenue);font-size:9.5px;font-weight:700;letter-spacing:.11em;
+  text-transform:uppercase;line-height:1.35;min-height:26px}
+.capitan .cara{display:flex;justify-content:center;margin:11px 0 10px}
+.capitan .cara .av{width:48px;height:48px;font-size:19px}
+.capitan .av.vacia{background:none;border:1px dashed var(--linea);color:var(--linea)}
+.capitan .nom{font-family:var(--display);font-size:17px;line-height:1.15;min-height:20px;
+  text-transform:uppercase;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.duplaCap .capitan:first-child.listo .nom{color:var(--reflector)}
 
 /* ---------- campos de a dos ---------- */
 .dosCampos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -265,6 +297,7 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
   main{padding:22px 18px 0}
   nav button{font-size:13px}
   .pozo .monto{font-size:54px}
+  .pozo .cara{font-size:42px}
   .cab,.fila{grid-template-columns:24px 40px minmax(0,1fr) 52px 44px;gap:14px}
   .fila{padding:11px 2px}
   .av{width:40px;height:40px;font-size:16px}

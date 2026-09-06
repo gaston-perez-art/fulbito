@@ -18,11 +18,22 @@ fecha y los puntos quedan pegados a la persona.
 4. Cargar el marcador y, abajo, los goles de cada uno.
 5. Guardar. Queda visible para todo el grupo al instante.
 
-Si te equivocaste, cada fecha tiene su botón **Borrar esta fecha** en la pestaña
-Fechas, visible solo después de entrar con la clave. Borrar una fecha se lleva
+Si te equivocaste, cada fecha tiene un tachito arriba a la derecha de su tarjeta
+en la pestaña Fechas, visible solo después de entrar con la clave. Borrar una fecha se lleva
 sus puntos y sus goles, y las que siguen se renumeran solas. El cuadro de
 Respaldo copia todo el torneo como texto: sirve para guardarlo aparte y para
 restaurarlo si algo se rompe.
+
+## Sorteo de capitanes
+
+Antes del partido: marcás quiénes vinieron, sumás a mano a los que no están en
+la lista, y salen los dos capitanes de a uno. El primero que sale elige primero.
+El que ya fue capitán queda afuera del sorteo hasta que hayan pasado todos, y
+ahí la rueda se reinicia sola.
+
+No pide clave: el sorteo pasa en la cancha y pedir clave ahí es fricción. El
+costo es que la lista de confirmados y el historial de capitanes viven en el
+`localStorage` del teléfono que sortea, no en la base.
 
 ## El pozo
 
