@@ -52,10 +52,10 @@ nav{display:flex;gap:2px;padding:0 8px;background:rgba(27,22,56,.92);
     -webkit-backdrop-filter:saturate(1.3) blur(12px);backdrop-filter:saturate(1.3) blur(12px);
     border-bottom:1px solid var(--linea);position:sticky;top:0;z-index:20}
 nav button{flex:1;background:none;border:0;color:var(--tenue);font-family:var(--texto);
-  font-weight:600;font-size:12.5px;padding:14px 2px 12px;cursor:pointer;
-  border-bottom:2px solid transparent}
+  font-weight:600;font-size:11.5px;padding:14px 1px 12px;cursor:pointer;
+  border-bottom:2px solid transparent;white-space:nowrap}
 nav button.on{color:var(--hueso);border-bottom-color:var(--reflector)}
-nav .llave{flex:0 0 42px}
+nav .llave{flex:0 0 34px;font-size:13px}
 
 main{padding:18px 14px 0}
 section{display:none}
@@ -68,10 +68,14 @@ section.on{display:block}
   border:1px solid rgba(255,182,39,.34)}
 .puntero .caras{display:flex;flex:0 0 auto}
 .puntero .caras .av{width:46px;height:46px;font-size:18px}
+/* cada burbuja tapa a la de su izquierda: la última queda entera arriba */
 .puntero.multi .caras .av{width:38px;height:38px;font-size:14px;margin-right:-13px;
-  box-shadow:0 0 0 2px #2E2450}
+  position:relative;box-shadow:0 0 0 2px #2E2450}
+.puntero.multi .caras .av:nth-child(1){z-index:1}
+.puntero.multi .caras .av:nth-child(2){z-index:2}
+.puntero.multi .caras .av:nth-child(3){z-index:3}
 .puntero.multi .caras .av:last-child{margin-right:0}
-.puntero .av.mas{background:rgba(255,255,255,.10);color:var(--tenue);font-size:12px}
+.puntero .av.mas{background:#3B3363;color:var(--hueso);font-size:12px}
 .puntero .txt{flex:1;min-width:0}
 .puntero .rot{color:var(--reflector);font-size:10.5px;font-weight:700;
   letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;
@@ -79,6 +83,7 @@ section.on{display:block}
 .puntero .nom{font-family:var(--display);font-size:27px;line-height:1.05;margin:4px 0 3px;
   text-transform:uppercase;letter-spacing:-.02em}
 .puntero.multi .nom{font-size:19px;white-space:nowrap}
+.puntero.multi .rot{letter-spacing:.10em}
 .puntero .det{color:var(--tenue);font-size:12px;line-height:1.4}
 .puntero.multi .det{font-size:11.5px}
 .puntero .pts{flex:0 0 auto;text-align:right}
@@ -104,8 +109,15 @@ section.on{display:block}
 .fila .id{min-width:0}
 .fila .nm{font-weight:600;font-size:15px;line-height:1.25;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fila .mini{color:var(--tenue);font-size:11.5px;line-height:1.3;margin-top:1px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila .stats{display:flex;align-items:center;gap:4px;margin-top:4px}
+.tag{background:rgba(255,255,255,.055);border-radius:5px;padding:2px 4px;
+  font-size:10.5px;font-weight:600;color:var(--tenue);text-align:center;
+  line-height:1.35;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag b{color:var(--hueso);font-weight:700}
+.tag.pj{min-width:38px}
+.tag.chico{min-width:26px}
+.tag.gfgc{min-width:50px}
+.tag.nada{background:none;padding-left:0;font-weight:500}
 .fila .dif{text-align:right;font-size:13px}
 .fila .pt{text-align:right;font-family:var(--display);font-size:17px}
 .fila.lider .rk,.fila.lider .pt{color:var(--reflector)}
@@ -198,9 +210,61 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
   word-break:break-word}
 .vacio{text-align:center;color:var(--tenue);font-size:14px;padding:40px 20px;line-height:1.6}
 
+/* ---------- el pozo ---------- */
+.pozo{position:relative;overflow:hidden;border-radius:18px;padding:24px 20px 20px;
+  text-align:center;margin-bottom:14px;
+  background:linear-gradient(160deg,#4A360C 0%,#241E48 58%,#1B1638 100%);
+  border:1px solid rgba(255,182,39,.42)}
+.pozo .brillo{position:absolute;inset:-60% -20% auto;height:200%;pointer-events:none;
+  background:radial-gradient(58% 46% at 50% 30%, rgba(255,182,39,.32) 0%, transparent 72%)}
+.pozo .rot{position:relative;color:var(--reflector);font-size:11px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase}
+.pozo .monto{position:relative;font-family:var(--display);font-size:44px;line-height:1.05;
+  margin:9px 0 7px;color:var(--reflector);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;text-shadow:0 0 28px rgba(255,182,39,.38)}
+.pozo .sub{position:relative;color:var(--tenue);font-size:12px;line-height:1.45}
+
+.proyeccion{display:flex;align-items:baseline;gap:11px;background:var(--piso);
+  border:1px solid var(--linea);border-radius:13px;padding:13px 15px}
+.proyeccion b{flex:0 0 auto;font-family:var(--display);font-size:20px;
+  font-variant-numeric:tabular-nums}
+.proyeccion span{color:var(--tenue);font-size:12px;line-height:1.45}
+
+.destino{margin-top:11px;padding:13px 15px;border-radius:13px;font-size:13.5px;
+  line-height:1.5;background:var(--alto);border:1px solid var(--linea)}
+.destino.tenue{color:var(--tenue);font-size:12.5px}
+
+.desglose{border-top:1px solid var(--linea)}
+.desglose .linea{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline;
+  padding:10px 2px;border-bottom:1px solid rgba(255,255,255,.05);
+  font-variant-numeric:tabular-nums}
+.desglose .q{font-weight:600;font-size:13.5px}
+.desglose .m{color:var(--tenue);font-size:11.5px}
+.desglose .v{font-weight:700;font-size:13.5px}
+.desglose .ajuste .q{color:var(--tenue)}
+
+/* ---------- borrar una fecha ---------- */
+.fecha .quitar{width:100%;margin-top:11px;background:none;border:1px solid var(--linea);
+  color:var(--tenue);border-radius:10px;padding:10px;font-size:12.5px;font-weight:600;
+  cursor:pointer;font-family:var(--texto)}
+.fecha .quitar:active{background:var(--alto)}
+.fecha .borrar{display:flex;align-items:center;gap:8px;margin-top:11px}
+.fecha .borrar span{flex:1;color:var(--brasa);font-size:12px;line-height:1.35}
+.fecha .borrar button{border-radius:10px;padding:10px 14px;font-size:12.5px;font-weight:600;
+  cursor:pointer;font-family:var(--texto);border:1px solid var(--linea);
+  background:var(--piso);color:var(--tenue)}
+.fecha .borrar .si{background:rgba(255,107,91,.16);border-color:rgba(255,107,91,.5);
+  color:var(--brasa)}
+
+/* ---------- campos de a dos ---------- */
+.dosCampos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rotulo{display:block;color:var(--tenue);font-size:11px;font-weight:600;margin-bottom:5px}
+
 /* ---------- de tablet para arriba ---------- */
 @media (min-width:560px){
   main{padding:22px 18px 0}
+  nav button{font-size:13px}
+  .pozo .monto{font-size:54px}
   .cab,.fila{grid-template-columns:24px 40px minmax(0,1fr) 52px 44px;gap:14px}
   .fila{padding:11px 2px}
   .av{width:40px;height:40px;font-size:16px}

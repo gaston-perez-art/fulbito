@@ -6,10 +6,12 @@ const FOTOS = Object.fromEntries(PLANTEL.filter(j => j.foto).map(j => [j.nombre,
 
 /* ====== estado ====== */
 let fechas = [];
+let pozo = {cuota:500, ajuste:0, nota:""};
 let cargando = true;
 let desbloqueado = false;
 let clave = "";                 // la que escribió el encargado; vive solo en memoria
 let form = null;
+let confirmar = null;           // número de fecha esperando confirmación de borrado
 let conectado = false;
 let diag = "";                  // texto del último error real
 
@@ -43,9 +45,16 @@ async function leer(){
     cargando = false; pintar(); return;
   }
   try{
-    const r = await fetch(API + "fechas?select=*&order=n.asc", {headers:cabeceras()});
-    if(!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()));
-    fechas = (await r.json()).map(desdeFila);
+    const [rf, rp] = await Promise.all([
+      fetch(API + "fechas?select=*&order=n.asc", {headers:cabeceras()}),
+      fetch(API + "pozo?select=*&id=eq.1", {headers:cabeceras()})
+    ]);
+    if(!rf.ok) throw new Error("HTTP " + rf.status + " " + (await rf.text()));
+    fechas = (await rf.json()).map(desdeFila);
+    if(rp.ok){
+      const p = (await rp.json())[0];
+      if(p) pozo = {cuota:p.cuota, ajuste:p.ajuste, nota:p.nota || ""};
+    }
     conectado = true; diag = "";
   }catch(e){
     conectado = false;
@@ -57,22 +66,30 @@ async function verificarClave(v){
   return await rpc("verificar_clave", {p_clave:v}) === true;
 }
 async function cargarFecha(f){
-  const n = await rpc("cargar_fecha", {
+  return await rpc("cargar_fecha", {
     p_clave:clave, p_dia:f.dia, p_equipo_a:f.equipoA, p_equipo_b:f.equipoB,
     p_goles_a:f.golesA, p_goles_b:f.golesB, p_goleadores:f.goleadores});
-  return n;
 }
-async function borrarUltima(){
-  return await rpc("borrar_ultima", {p_clave:clave});
+async function borrarFecha(n){
+  return await rpc("borrar_fecha", {p_clave:clave, p_n:n});
+}
+async function guardarPozo(p){
+  return await rpc("guardar_pozo", {p_clave:clave, p_cuota:p.cuota,
+                                    p_ajuste:p.ajuste, p_nota:p.nota});
 }
 async function reemplazarTodo(lista){
   return await rpc("reemplazar_todo", {p_clave:clave, p_fechas:lista});
 }
 
+/* ====== plata ====== */
+// 1.000 · 10.000 · 100.000, coma para los decimales. Es el formato de acá.
+const PESOS = new Intl.NumberFormat("es-AR", {minimumFractionDigits:0, maximumFractionDigits:2});
+function plata(n){ return "$" + PESOS.format(n); }
+
 /* ====== avatares ====== */
 // El tono sale del nombre pero queda encerrado en la familia fría de la paleta:
 // 14 avatares distintos que igual se leen como un solo sistema. Sin ámbar acá:
-// el ámbar es del puntero y del goleador, y de nadie más.
+// el ámbar es del puntero, del goleador y del pozo, y de nadie más.
 function tono(n){
   let h = 0;
   for(const c of n) h = (h * 31 + c.codePointAt(0)) % 360;
@@ -114,6 +131,12 @@ function goleadores(){
     .map(([n,c]) => ({n, c, pj:pj[n]||0}))
     .sort((x,y) => y.c-x.c || x.pj-y.pj || x.n.localeCompare(y.n));
 }
+// Cada presencia de un fijo en una fecha pone la cuota. El ajuste es la mano
+// del que carga: invitados que ponen, una fecha que se pagó distinto, lo que sea.
+function presencias(f){ return f.equipoA.length + f.equipoB.length; }
+function totalPozo(){
+  return fechas.reduce((s,f) => s + presencias(f), 0) * pozo.cuota + pozo.ajuste;
+}
 
 /* ====== vistas ====== */
 function vTabla(){
@@ -144,7 +167,7 @@ function vTabla(){
         <div class="caras">${nombres.slice(0,2).map(avatar).join("")}${
           nombres.length > 2 ? `<div class="av mas">+${nombres.length - 2}</div>` : ""}</div>
         <div class="txt">
-          <div class="rot">Empatados en la punta</div>
+          <div class="rot">Empate en la punta</div>
           <div class="nom">${nombres.length} jugadores</div>
           <div class="det">${nombres.join(" · ")}</div>
         </div>
@@ -152,13 +175,17 @@ function vTabla(){
       </div>`;
 
   const filas = t.map((r,i) => {
-    const mini = r.pj
-      ? `${r.pj} ${r.pj === 1 ? "fecha" : "fechas"} · ${r.g}G ${r.e}E ${r.p}P · ${r.gf}-${r.gc}`
-      : "todavía no jugó";
+    const stats = r.pj
+      ? `<span class="tag pj"><b>${r.pj}</b> PJ</span>
+         <span class="tag chico"><b>${r.g}</b>G</span>
+         <span class="tag chico"><b>${r.e}</b>E</span>
+         <span class="tag chico"><b>${r.p}</b>P</span>
+         <span class="tag gfgc"><b>${r.gf}</b>-<b>${r.gc}</b></span>`
+      : `<span class="tag nada">todavía no jugó</span>`;
     return `<div class="fila${solo && i === 0 ? " lider" : ""}${r.pj ? "" : " zapatero"}">
       <div class="rk">${i+1}</div>
       ${avatar(r.j)}
-      <div class="id"><div class="nm">${r.j}</div><div class="mini">${mini}</div></div>
+      <div class="id"><div class="nm">${r.j}</div><div class="stats">${stats}</div></div>
       <div class="dif ${r.dif>0?"dif-pos":r.dif<0?"dif-neg":""}">${r.dif>0?"+":""}${r.dif}</div>
       <div class="pt">${r.pts}</div>
     </div>`;
@@ -168,8 +195,8 @@ function vTabla(){
       <div class="cab"><span class="c-jug">Jugador</span><span>Dif</span><span>Pts</span></div>
       ${filas}
     </div>
-    <p class="nota">La segunda línea de cada jugador son las fechas que jugó, cómo le fue
-      y los goles a favor y en contra del equipo en el que estuvo.
+    <p class="nota">PJ son las fechas jugadas; G, E y P cómo le fue en cada una;
+      el último par son los goles a favor y en contra del equipo en el que estuvo.
       No hay mínimo de fechas: campeón es el que más puntos suma.</p>`;
 }
 
@@ -190,6 +217,52 @@ function vGoles(){
     `<p class="nota">Se cuentan solo los goles de los ${FIJOS.length} fijos.
       Si empatan, va arriba el que jugó menos fechas.</p>`;
 }
+
+function vPozo(){
+  if(cargando) return `<div class="vacio">Cargando…</div>`;
+  const pres = fechas.reduce((s,f) => s + presencias(f), 0);
+  const total = totalPozo();
+  const promedio = fechas.length ? pres / fechas.length : 0;
+  const proyectado = fechas.length
+    ? Math.round(promedio * TOTAL_FECHAS) * pozo.cuota + pozo.ajuste
+    : 10 * TOTAL_FECHAS * pozo.cuota;
+
+  const desglose = fechas.length
+    ? [...fechas].reverse().map(f => `<div class="linea">
+        <span class="q">Fecha ${f.n}</span>
+        <span class="m">${presencias(f)} jugadores</span>
+        <span class="v">${plata(presencias(f) * pozo.cuota)}</span>
+      </div>`).join("")
+    : "";
+
+  return `<div class="pozo">
+      <div class="brillo" aria-hidden="true"></div>
+      <div class="rot">💰 Pozo acumulado</div>
+      <div class="monto">${plata(total)}</div>
+      <div class="sub">${fechas.length} ${fechas.length === 1 ? "fecha" : "fechas"} ·
+        ${pres} ${pres === 1 ? "presencia" : "presencias"} · ${plata(pozo.cuota)} cada una</div>
+    </div>
+    <div class="proyeccion">
+      <b>${plata(proyectado)}</b>
+      <span>es a lo que llega el pozo si se juegan las ${TOTAL_FECHAS} fechas
+        a este ritmo${fechas.length ? "" : " con 10 por fecha"}.</span>
+    </div>
+    ${pozo.nota
+      ? `<div class="destino">${pozo.nota}</div>`
+      : `<div class="destino tenue">Falta definir qué se hace con el pozo.
+          Se decide en el grupo y se escribe acá.</div>`}
+    ${desglose ? `<div class="campo" style="margin-top:22px">
+      <label>Fecha por fecha</label>
+      <div class="desglose">${desglose}
+        ${pozo.ajuste ? `<div class="linea ajuste">
+          <span class="q">Ajuste</span><span class="m">carga manual</span>
+          <span class="v">${pozo.ajuste > 0 ? "+" : ""}${plata(pozo.ajuste)}</span></div>` : ""}
+      </div></div>` : `<div class="vacio" style="padding:26px 20px">El pozo arranca
+        con la primera fecha.</div>`}
+    <p class="nota">Cada jugador pone ${plata(pozo.cuota)} por fecha jugada, aparte de la cancha.
+      El total sale de las presencias cargadas${pozo.ajuste ? ", más el ajuste manual" : ""}.</p>`;
+}
+
 function vFechas(){
   if(cargando) return `<div class="vacio">Cargando…</div>`;
   if(!fechas.length) return `<div class="vacio">Sin fechas jugadas.</div>`;
@@ -197,6 +270,14 @@ function vFechas(){
     const an = Object.entries(f.goleadores||{}).filter(([,c]) => c>0)
       .sort((a,b) => b[1]-a[1])
       .map(([n,c]) => c>1 ? `${n} (${c})` : n).join(" · ");
+    const pie = !desbloqueado ? ""
+      : confirmar === f.n
+        ? `<div class="borrar">
+             <span>Se van sus puntos y sus goles.</span>
+             <button class="no" data-cancelar="1">No</button>
+             <button class="si" data-borrar-ok="${f.n}">Borrar</button>
+           </div>`
+        : `<button class="quitar" data-borrar="${f.n}">Borrar esta fecha</button>`;
     return `<div class="fecha">
       <div class="top"><span>Fecha ${f.n}</span><span>${f.dia||""}</span></div>
       <div class="duelo">
@@ -207,24 +288,26 @@ function vFechas(){
         <div class="lado der"><b>Equipo B</b>${f.equipoB.join(", ")}</div>
       </div>
       ${an ? `<div class="anot">Goles: ${an}</div>` : ""}
+      ${pie}
     </div>`;
   }).join("");
 }
+
 function vReglas(){
   const R = [
-    ["Cuándo","12 fechas, sábados a las 18. Arranca el 12/09 y cierra el 28/11. Hay dos sábados comodín para reprogramar lo que se suspenda por lluvia."],
-    ["Quién puntúa","Solo los " + FIJOS.length + " fijos: " + FIJOS.join(", ") + ". Los invitados juegan, pero no suman puntos ni goles a la tabla."],
-    ["El partido","Fútbol 5, partido largo y corrido. El sistema de relevos se define en el lanzamiento y se ajusta en las primeras fechas."],
-    ["Los equipos","Se arman antes de arrancar. Una vez que empezó el partido no se cambian: el resultado de la fecha es el del partido completo."],
-    ["Los puntos","3 por ganar, 1 por empatar, 0 por perder. El punto es del jugador, no del equipo."],
-    ["Los goles","GF y GC son los del equipo en el que jugaste esa fecha. La tabla de goleadores cuenta goles individuales."],
-    ["Desempates","Puntos, después diferencia de gol, después goles a favor, después partidos ganados."],
-    ["Campeón","El que más puntos suma al cabo de las " + TOTAL_FECHAS + " fechas. No hay mínimo de partidos jugados: cuenta lo que sumaste, jugaste las que jugaste."],
-    ["El registro","Al terminar, el resultado y los goleadores se pasan al grupo y se cargan acá. El responsable es Gastón, pero cualquiera con la clave puede cargar la fecha desde el celular."],
-    ["Reclamos","Lo cargado queda firme a las 48 horas. Lo que se discuta, se discute antes y en el grupo."]
+    ["Cuándo","${TOTAL} fechas, sábados a las 18, del 12/09 al 28/11. Hay dos sábados comodín para reprogramar lo que se suspenda por lluvia."],
+    ["Quién juega y quién puntúa","Los ${N} fijos suman puntos y goles: ${LISTA}. Los invitados juegan, pero no entran en la tabla."],
+    ["El partido","Fútbol 5, largo y corrido. Los equipos se arman antes de arrancar y no se tocan más: el resultado de la fecha es el del partido completo."],
+    ["Los puntos","3 por ganar, 1 por empatar, 0 por perder, y el punto es del jugador, no del equipo. Desempata la diferencia de gol, después los goles a favor, después los partidos ganados. Campeón es el que más puntos suma, sin mínimo de fechas."],
+    ["El pozo","Aparte de la cancha, cada uno pone ${CUOTA} por fecha jugada. Se acumula toda la temporada y se ve en la pestaña Pozo."],
+    ["El registro","Al terminar se pasan resultado y goleadores al grupo y se cargan acá. Puede cargar cualquiera que tenga la clave; el responsable es Gastón. Lo cargado queda firme a las 48 horas."]
   ];
   return R.map((r,i) => `<div class="regla"><div class="n">${i+1}</div>
-    <p><b>${r[0]}</b><small>${r[1]}</small></p></div>`).join("");
+    <p><b>${r[0]}</b><small>${r[1]
+      .replace("${TOTAL}", TOTAL_FECHAS)
+      .replace("${N}", FIJOS.length)
+      .replace("${LISTA}", FIJOS.join(", "))
+      .replace("${CUOTA}", plata(pozo.cuota))}</small></p></div>`).join("");
 }
 
 /* ====== carga ====== */
@@ -277,7 +360,25 @@ function vCarga(){
     </div>
     ${sel.length ? `<div class="campo"><label>Goleadores</label>${anot}</div>` : ""}
     <button class="primario" id="btnGuardar">Guardar fecha ${n}</button>
-    ${fechas.length ? `<button class="secundario" id="btnBorrar">Borrar la última fecha cargada</button>` : ""}
+    <p class="hint" style="margin-top:12px">Para borrar una fecha ya cargada, andá a
+      Fechas: ahora cada una tiene su botón.</p>
+
+    <div class="campo" style="margin-top:26px">
+      <label>El pozo</label>
+      <p class="hint">La cuota se multiplica por cada presencia cargada. El ajuste suma o
+        resta a mano lo que el cálculo no ve: invitados que ponen, una fecha que se pagó distinto.</p>
+      <div class="dosCampos">
+        <div><small class="rotulo">Cuota por fecha</small>
+          <input type="number" id="pCuota" inputmode="numeric" value="${pozo.cuota}"></div>
+        <div><small class="rotulo">Ajuste</small>
+          <input type="number" id="pAjuste" inputmode="numeric" value="${pozo.ajuste}"></div>
+      </div>
+      <small class="rotulo" style="display:block;margin-top:12px">Qué se hace con el pozo</small>
+      <input type="text" id="pNota" value="${(pozo.nota||"").replace(/"/g,"&quot;")}"
+        placeholder="Se lo lleva el campeón, se reparte, se come un asado…">
+      <button class="secundario" id="btnPozo">Guardar el pozo</button>
+    </div>
+
     <div class="campo" style="margin-top:26px">
       <label>Respaldo</label>
       <p class="hint">Copiá este texto y guardalo. Pegándolo acá y tocando Restaurar
@@ -292,6 +393,7 @@ function pintar(){
   document.getElementById("v-tabla").innerHTML  = vTabla();
   document.getElementById("v-goles").innerHTML  = vGoles();
   document.getElementById("v-fechas").innerHTML = vFechas();
+  document.getElementById("v-pozo").innerHTML   = vPozo();
   document.getElementById("v-reglas").innerHTML = vReglas();
   document.getElementById("v-carga").innerHTML  = vCarga();
   document.getElementById("hFecha").textContent = fechas.length;
@@ -302,13 +404,14 @@ function pintar(){
       `<i class="${i < fechas.length ? "on" : ""}"></i>`).join("");
 }
 function verCarga(){ document.querySelector('nav [data-v="carga"]').click(); }
-// Repinta solo el formulario y deja el scroll donde estaba. Cambiar de pestaña
+// Repinta una sola sección y deja el scroll donde estaba. Cambiar de pestaña
 // manda arriba de todo, y eso en medio de una carga es insoportable.
-function repintarCarga(){
+function repintar(id, vista){
   const y = window.scrollY;
-  document.getElementById("v-carga").innerHTML = vCarga();
+  document.getElementById(id).innerHTML = vista();
   window.scrollTo(0, y);
 }
+function repintarCarga(){ repintar("v-carga", vCarga); }
 function avisar(){
   const a = document.querySelector("#v-carga .aviso.err");
   if(a) a.scrollIntoView({block:"center", behavior:"smooth"});
@@ -338,6 +441,32 @@ document.addEventListener("click", async e => {
     }
     pintar(); verCarga(); return;
   }
+
+  /* --- borrar una fecha, desde la pestaña Fechas --- */
+  if(t.dataset.borrar){
+    confirmar = Number(t.dataset.borrar);
+    repintar("v-fechas", vFechas); return;
+  }
+  if(t.dataset.cancelar){
+    confirmar = null;
+    repintar("v-fechas", vFechas); return;
+  }
+  if(t.dataset.borrarOk){
+    const n = Number(t.dataset.borrarOk);
+    t.disabled = true; t.textContent = "Borrando…";
+    try{
+      await borrarFecha(n);
+      confirmar = null;
+      await leer();
+      document.querySelector('nav [data-v="fechas"]').click();
+    }catch(err){
+      confirmar = null;
+      repintar("v-fechas", vFechas);
+      alertaFechas("No se pudo borrar: " + err.message);
+    }
+    return;
+  }
+
   if(t.closest("#chips") && t.dataset.j){
     const j = t.dataset.j, e0 = form.equipos[j];
     if(!e0) form.equipos[j] = "a";
@@ -357,6 +486,24 @@ document.addEventListener("click", async e => {
     if(casilla) casilla.textContent = v;
     return;
   }
+
+  if(t.id === "btnPozo"){
+    const nuevo = {
+      cuota: Math.max(0, Math.round(Number(document.getElementById("pCuota").value) || 0)),
+      ajuste: Math.round(Number(document.getElementById("pAjuste").value) || 0),
+      nota: document.getElementById("pNota").value.trim()
+    };
+    t.disabled = true;
+    try{
+      await guardarPozo(nuevo);
+      pozo = nuevo;
+      form.msg = {t:"ok", x:"Pozo actualizado: " + plata(totalPozo()) + "."};
+    }catch(err){
+      form.msg = {t:"err", x:"No se pudo guardar el pozo: " + err.message};
+    }
+    pintar(); verCarga(); return;
+  }
+
   if(t.id === "btnGuardar"){
     const A = FIJOS.filter(j => form.equipos[j] === "a");
     const B = FIJOS.filter(j => form.equipos[j] === "b");
@@ -395,6 +542,7 @@ document.addEventListener("click", async e => {
       repintarCarga(); avisar(); return;
     }
   }
+
   if(t.id === "btnRestaurar"){
     let d;
     try{
@@ -416,20 +564,12 @@ document.addEventListener("click", async e => {
     }
     pintar(); verCarga(); return;
   }
-  if(t.id === "btnBorrar"){
-    t.disabled = true;
-    try{
-      await borrarUltima();
-      fechas.pop();
-      form = nuevoForm();
-      form.msg = {t:"ok", x:"Se borró la última fecha."};
-    }catch(err){
-      form = form || nuevoForm();
-      form.msg = {t:"err", x:"No se pudo borrar: " + err.message};
-    }
-    pintar(); verCarga(); return;
-  }
 });
+
+function alertaFechas(texto){
+  const s = document.getElementById("v-fechas");
+  s.insertAdjacentHTML("afterbegin", `<div class="aviso err">${texto}</div>`);
+}
 
 pintar();
 leer();

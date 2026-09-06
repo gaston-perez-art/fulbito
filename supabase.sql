@@ -30,7 +30,17 @@ create table if not exists public.torneo_config (
   clave_hash text not null
 );
 
+-- el pozo: una sola fila con la cuota por presencia y un ajuste manual
+create table if not exists public.pozo (
+  id     smallint primary key default 1 check (id = 1),
+  cuota  int  not null default 500 check (cuota >= 0),
+  ajuste int  not null default 0,
+  nota   text not null default ''
+);
+insert into public.pozo (id) values (1) on conflict (id) do nothing;
+
 alter table public.fechas        enable row level security;
+alter table public.pozo          enable row level security;
 alter table public.torneo_config enable row level security;
 
 -- fechas: lectura abierta a cualquiera con la anon key
@@ -38,10 +48,16 @@ drop policy if exists "lectura publica de fechas" on public.fechas;
 create policy "lectura publica de fechas"
   on public.fechas for select to anon, authenticated using (true);
 
+drop policy if exists "lectura publica del pozo" on public.pozo;
+create policy "lectura publica del pozo"
+  on public.pozo for select to anon, authenticated using (true);
+
 -- torneo_config: sin políticas. Con RLS activo y sin policy, anon no la ve.
 
 revoke insert, update, delete on public.fechas from anon, authenticated;
 grant  select                  on public.fechas to   anon, authenticated;
+revoke insert, update, delete on public.pozo   from anon, authenticated;
+grant  select                  on public.pozo   to   anon, authenticated;
 revoke all on public.torneo_config from anon, authenticated;
 
 -- La clave de carga NO se define acá: se pone en una segunda consulta, aparte,
@@ -106,22 +122,47 @@ begin
 end;
 $$;
 
--- borra la última fecha cargada, para arreglar un error de carga
-create or replace function public.borrar_ultima(p_clave text)
+-- borra cualquier fecha y renumera las que quedan, para que sigan siendo 1..N.
+-- El rodeo por números negativos evita chocar con la clave primaria mientras
+-- se corren de a uno: Postgres verifica la unicidad fila por fila.
+create or replace function public.borrar_fecha(p_clave text, p_n int)
 returns int
 language plpgsql
 security definer
 set search_path = public, extensions
 as $$
-declare v_n int;
 begin
   if not public.clave_ok(p_clave) then
     raise exception 'clave incorrecta' using errcode = '42501';
   end if;
-  select max(n) into v_n from public.fechas;
-  if v_n is null then return 0; end if;
-  delete from public.fechas where n = v_n;
-  return v_n;
+  delete from public.fechas where n = p_n;
+  if not found then
+    raise exception 'la fecha % no existe', p_n;
+  end if;
+  update public.fechas set n = -n        where n > p_n;
+  update public.fechas set n = (-n) - 1  where n < 0;
+  return (select count(*) from public.fechas);
+end;
+$$;
+
+-- guarda la configuración del pozo
+create or replace function public.guardar_pozo(p_clave text, p_cuota int,
+                                               p_ajuste int, p_nota text)
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+begin
+  if not public.clave_ok(p_clave) then
+    raise exception 'clave incorrecta' using errcode = '42501';
+  end if;
+  if p_cuota < 0 then
+    raise exception 'la cuota no puede ser negativa';
+  end if;
+  update public.pozo
+     set cuota = p_cuota, ajuste = p_ajuste, nota = coalesce(p_nota, '')
+   where id = 1;
 end;
 $$;
 
@@ -160,13 +201,17 @@ $$;
 -- solo estas tres quedan expuestas a la anon key
 revoke execute on function public.verificar_clave(text)                                    from public;
 revoke execute on function public.cargar_fecha(text, text, text[], text[], int, int, jsonb) from public;
-revoke execute on function public.borrar_ultima(text)                                      from public;
+revoke execute on function public.borrar_fecha(text, int)                                  from public;
+revoke execute on function public.guardar_pozo(text, int, int, text)                       from public;
 revoke execute on function public.reemplazar_todo(text, jsonb)                             from public;
 
 grant execute on function public.verificar_clave(text)                                    to anon, authenticated;
 grant execute on function public.cargar_fecha(text, text, text[], text[], int, int, jsonb) to anon, authenticated;
-grant execute on function public.borrar_ultima(text)                                      to anon, authenticated;
+grant execute on function public.borrar_fecha(text, int)                                  to anon, authenticated;
+grant execute on function public.guardar_pozo(text, int, int, text)                       to anon, authenticated;
 grant execute on function public.reemplazar_todo(text, jsonb)                              to anon, authenticated;
+
+drop function if exists public.borrar_ultima(text);
 
 notify pgrst, 'reload schema';
 

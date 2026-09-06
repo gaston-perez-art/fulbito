@@ -18,9 +18,19 @@ fecha y los puntos quedan pegados a la persona.
 4. Cargar el marcador y, abajo, los goles de cada uno.
 5. Guardar. Queda visible para todo el grupo al instante.
 
-Si te equivocaste, **Borrar la última fecha cargada** la deshace. El cuadro de
+Si te equivocaste, cada fecha tiene su botón **Borrar esta fecha** en la pestaña
+Fechas, visible solo después de entrar con la clave. Borrar una fecha se lleva
+sus puntos y sus goles, y las que siguen se renumeran solas. El cuadro de
 Respaldo copia todo el torneo como texto: sirve para guardarlo aparte y para
 restaurarlo si algo se rompe.
+
+## El pozo
+
+Aparte de la cancha, cada jugador pone una cuota por fecha jugada. El total se
+calcula solo: presencias cargadas × cuota, más un ajuste manual para lo que el
+cálculo no ve (invitados que ponen, una fecha que se pagó distinto). La cuota,
+el ajuste y el texto de qué se hace con el pozo se editan desde la pantalla de
+carga, con la clave.
 
 ## Cómo está armado
 
