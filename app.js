@@ -13,6 +13,7 @@ let desbloqueado = false;
 let clave = "";                 // la que escribió el encargado; vive solo en memoria
 let form = null;
 let confirmar = null;           // número de fecha esperando confirmación de borrado
+let editando = null;            // {n, golesA, golesB, goleadores} de la fecha en corrección
 let vinieron = [];              // los que confirmaron para hoy
 let invitados = [];             // nombres agregados a mano, fuera de los fijos
 let yaFueron = [];              // capitanes de rondas anteriores
@@ -75,6 +76,10 @@ async function cargarFecha(f){
   return await rpc("cargar_fecha", {
     p_clave:clave, p_dia:f.dia, p_equipo_a:f.equipoA, p_equipo_b:f.equipoB,
     p_goles_a:f.golesA, p_goles_b:f.golesB, p_goleadores:f.goleadores});
+}
+async function editarFecha(e){
+  return await rpc("editar_fecha", {p_clave:clave, p_n:e.n,
+    p_goles_a:e.golesA, p_goles_b:e.golesB, p_goleadores:e.goleadores});
 }
 async function borrarFecha(n){
   return await rpc("borrar_fecha", {p_clave:clave, p_n:n});
@@ -159,6 +164,23 @@ function goleadores(){
 function presencias(f){ return f.equipoA.length + f.equipoB.length; }
 function totalPozo(){
   return fechas.reduce((s,f) => s + presencias(f), 0) * pozo.cuota;
+}
+
+/* ====== qué hace válida a una fecha ====== */
+// La suma de los goles de cada equipo tiene que dar exactamente su marcador.
+// Ni más —no puede haber goles de la nada— ni menos: si faltan, alguien no
+// quedó anotado y la tabla de goleadores arranca torcida.
+function sumaDe(lista, gols){ return lista.reduce((s,j) => s + (gols[j]||0), 0); }
+function revisar(A, B, gA, gB, gols){
+  if(!A.length || !B.length) return "Faltan jugadores en alguno de los dos equipos.";
+  if(!Number.isInteger(gA) || !Number.isInteger(gB) || gA < 0 || gB < 0)
+    return "Cargá el resultado con números.";
+  const sA = sumaDe(A, gols), sB = sumaDe(B, gols);
+  if(sA === gA && sB === gB) return null;
+  const faltan = [];
+  if(sA !== gA) faltan.push(`el A hizo ${gA} y tenés ${sA} repartidos`);
+  if(sB !== gB) faltan.push(`el B hizo ${gB} y tenés ${sB} repartidos`);
+  return "Los goles no cierran: " + faltan.join("; ") + ".";
 }
 
 /* ====== vistas ====== */
@@ -281,23 +303,32 @@ function vFechas(){
     const an = Object.entries(f.goleadores||{}).filter(([,c]) => c>0)
       .sort((a,b) => b[1]-a[1])
       .map(([n,c]) => c>1 ? `${n} (${c})` : n).join(" · ");
-    const tacho = desbloqueado
-      ? `<button class="tacho" data-borrar="${f.n}" aria-label="Borrar la fecha ${f.n}">
+
+    const herramientas = desbloqueado
+      ? `<button class="tacho" data-editar="${f.n}" aria-label="Corregir la fecha ${f.n}">
+          <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path
+            d="M3.6 16.4l.6-3.3L12.9 4.4a1.6 1.6 0 0 1 2.3 0l.4.4a1.6 1.6 0 0 1 0 2.3L6.9 15.8l-3.3.6zM11.9 5.5l2.6 2.6"
+            fill="none" stroke="currentColor" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round"/></svg>
+         </button>
+         <button class="tacho" data-borrar="${f.n}" aria-label="Borrar la fecha ${f.n}">
           <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path
             d="M3.5 5.5h13M8 5.5V4.2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.3M5.6 5.5l.7 10.1a1.5 1.5 0 0 0 1.5 1.4h4.4a1.5 1.5 0 0 0 1.5-1.4l.7-10.1"
             fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
          </button>`
       : "";
+
     const pie = confirmar === f.n
       ? `<div class="borrar">
            <span>Se van sus puntos y sus goles.</span>
            <button class="no" data-cancelar="1">No</button>
            <button class="si" data-borrar-ok="${f.n}">Borrar</button>
          </div>`
-      : "";
+      : (editando && editando.n === f.n ? editor(f) : "");
+
     return `<div class="fecha">
       <div class="top"><span>Fecha ${f.n}</span>
-        <span class="der">${f.dia||""}${tacho}</span></div>
+        <span class="der">${f.dia||""}${herramientas}</span></div>
       <div class="duelo">
         <div class="lado">
           <div class="caritas">${f.equipoA.map(avatar).join("")}</div>
@@ -315,6 +346,34 @@ function vFechas(){
       ${pie}
     </div>`;
   }).join("");
+}
+
+// El editor corrige el resultado y los goleadores. Los equipos no se tocan:
+// si están mal, la fecha se borra y se carga de nuevo.
+function editor(f){
+  const fila = (j, eq) => `<div class="anotador">
+      <div class="nm">${j} <span style="color:var(--tenue);font-size:var(--t-2)">${eq}</span></div>
+      <button data-eg="${j}" data-d="-1">−</button>
+      <div class="v">${editando.goleadores[j]||0}</div>
+      <button data-eg="${j}" data-d="1">+</button>
+    </div>`;
+  return `<div class="editor">
+      <div class="marcador">
+        <input type="number" id="eGA" inputmode="numeric" value="${editando.golesA}">
+        <span>a</span>
+        <input type="number" id="eGB" inputmode="numeric" value="${editando.golesB}">
+      </div>
+      <div class="campo" style="margin:14px 0 0">
+        <label>Goleadores</label>
+        ${f.equipoA.map(j => fila(j,"A")).join("")}
+        ${f.equipoB.map(j => fila(j,"B")).join("")}
+      </div>
+      <div id="eChequeo"></div>
+      <div class="acciones">
+        <button class="secundario" id="btnEditarNo">Cancelar</button>
+        <button class="primario" id="btnEditarOk">Guardar cambios</button>
+      </div>
+    </div>`;
 }
 
 function vSorteo(){
@@ -459,6 +518,7 @@ function vCarga(){
       </div>
     </div>
     ${sel.length ? `<div class="campo"><label>Goleadores</label>${anot}</div>` : ""}
+    <div id="chequeo"></div>
     <button class="primario" id="btnGuardar">Guardar fecha ${n}</button>
 
     <div class="campo" style="margin-top:30px">
@@ -484,8 +544,48 @@ function pintar(){
   document.getElementById("hBarra").innerHTML =
     Array.from({length:TOTAL_FECHAS}, (_,i) =>
       `<i class="${i < fechas.length ? "on" : ""}"></i>`).join("");
+  revisarCarga(); revisarEdicion();
 }
 function verCarga(){ document.querySelector('nav [data-v="carga"]').click(); }
+
+// El error se muestra mientras se carga, no al apretar Guardar, y el botón
+// queda bloqueado hasta que la fecha cierre.
+function equiposDelForm(){
+  return [FIJOS.filter(j => form.equipos[j] === "a"),
+          FIJOS.filter(j => form.equipos[j] === "b")];
+}
+function mostrar(idAviso, idBoton, err){
+  const caja = document.getElementById(idAviso), btn = document.getElementById(idBoton);
+  if(caja) caja.innerHTML = err ? `<div class="aviso err">${err}</div>` : "";
+  if(btn) btn.disabled = Boolean(err);
+}
+function revisarCarga(){
+  if(!desbloqueado || !form) return;
+  const gA = document.getElementById("gA"), gB = document.getElementById("gB");
+  if(!gA || !gB) return;
+  form.golesA = gA.value; form.golesB = gB.value;
+  const [A,B] = equiposDelForm();
+  const gols = {};
+  Object.entries(form.goleadores).forEach(([j,c]) => { if(c > 0) gols[j] = c; });
+  mostrar("chequeo", "btnGuardar",
+          revisar(A, B, Number(gA.value), Number(gB.value), gols));
+}
+function revisarEdicion(){
+  if(!editando) return;
+  const gA = document.getElementById("eGA"), gB = document.getElementById("eGB");
+  if(!gA || !gB) return;
+  editando.golesA = gA.value; editando.golesB = gB.value;
+  const f = fechas.find(x => x.n === editando.n);
+  if(!f) return;
+  const gols = {};
+  Object.entries(editando.goleadores).forEach(([j,c]) => { if(c > 0) gols[j] = c; });
+  mostrar("eChequeo", "btnEditarOk",
+          revisar(f.equipoA, f.equipoB, Number(gA.value), Number(gB.value), gols));
+}
+document.addEventListener("input", e => {
+  if(e.target.id === "gA" || e.target.id === "gB") revisarCarga();
+  if(e.target.id === "eGA" || e.target.id === "eGB") revisarEdicion();
+});
 // Repinta una sola sección y deja el scroll donde estaba. Cambiar de pestaña
 // manda arriba de todo, y eso en medio de una carga es insoportable.
 function repintar(id, vista){
@@ -493,7 +593,7 @@ function repintar(id, vista){
   document.getElementById(id).innerHTML = vista();
   window.scrollTo(0, y);
 }
-function repintarCarga(){ repintar("v-carga", vCarga); }
+function repintarCarga(){ repintar("v-carga", vCarga); revisarCarga(); }
 const quieto = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // Las dos animaciones llevan red: si requestAnimationFrame no corre —pestaña en
@@ -650,8 +750,44 @@ document.addEventListener("click", async e => {
 
   /* --- borrar una fecha, desde la pestaña Fechas --- */
   if(t.dataset.borrar){
-    confirmar = Number(t.dataset.borrar);
+    confirmar = Number(t.dataset.borrar); editando = null;
     repintar("v-fechas", vFechas); return;
+  }
+  if(t.dataset.editar){
+    const f = fechas.find(x => x.n === Number(t.dataset.editar));
+    if(!f) return;
+    confirmar = null;
+    editando = {n:f.n, golesA:f.golesA, golesB:f.golesB, goleadores:{...(f.goleadores||{})}};
+    repintar("v-fechas", vFechas); revisarEdicion(); return;
+  }
+  if(t.id === "btnEditarNo"){
+    editando = null; repintar("v-fechas", vFechas); return;
+  }
+  // el más y el menos del editor no repintan: tocan el número y revalidan
+  if(t.dataset.eg){
+    const j = t.dataset.eg;
+    const v = Math.max(0, (editando.goleadores[j]||0) + Number(t.dataset.d));
+    editando.goleadores[j] = v;
+    const casilla = t.parentElement.querySelector(".v");
+    if(casilla) casilla.textContent = v;
+    revisarEdicion(); return;
+  }
+  if(t.id === "btnEditarOk"){
+    const gols = {};
+    Object.entries(editando.goleadores).forEach(([j,c]) => { if(c > 0) gols[j] = c; });
+    const cambio = {n:editando.n, golesA:Number(editando.golesA),
+                    golesB:Number(editando.golesB), goleadores:gols};
+    t.disabled = true; t.textContent = "Guardando…";
+    try{
+      await editarFecha(cambio);
+      editando = null;
+      await leer();
+      document.querySelector('nav [data-v="fechas"]').click();
+    }catch(err){
+      t.disabled = false; t.textContent = "Guardar cambios";
+      mostrar("eChequeo", "btnEditarOk", "No se pudo guardar: " + err.message);
+    }
+    return;
   }
   if(t.dataset.cancelar){
     confirmar = null;
@@ -690,7 +826,7 @@ document.addEventListener("click", async e => {
     form.goleadores[j] = v;
     const casilla = t.parentElement.querySelector(".v");
     if(casilla) casilla.textContent = v;
-    return;
+    revisarCarga(); return;
   }
 
   if(t.id === "btnPozo"){
@@ -708,27 +844,14 @@ document.addEventListener("click", async e => {
   }
 
   if(t.id === "btnGuardar"){
-    const A = FIJOS.filter(j => form.equipos[j] === "a");
-    const B = FIJOS.filter(j => form.equipos[j] === "b");
+    const [A,B] = equiposDelForm();
     const gA = Number(document.getElementById("gA").value);
     const gB = Number(document.getElementById("gB").value);
     form.golesA = gA; form.golesB = gB;
-    if(!A.length || !B.length){
-      form.msg = {t:"err", x:"Faltan jugadores en alguno de los dos equipos."};
-      repintarCarga(); avisar(); return;
-    }
-    if(!Number.isInteger(gA) || !Number.isInteger(gB) || gA < 0 || gB < 0){
-      form.msg = {t:"err", x:"Cargá el resultado con números."};
-      repintarCarga(); avisar(); return;
-    }
     const gols = {};
     Object.entries(form.goleadores).forEach(([j,c]) => { if(c > 0) gols[j] = c; });
-    const sumA = A.reduce((s,j) => s + (gols[j]||0), 0);
-    const sumB = B.reduce((s,j) => s + (gols[j]||0), 0);
-    if(sumA > gA || sumB > gB){
-      form.msg = {t:"err", x:"Hay más goleadores cargados que goles en el marcador."};
-      repintarCarga(); avisar(); return;
-    }
+    const err = revisar(A, B, gA, gB, gols);
+    if(err){ mostrar("chequeo", "btnGuardar", err); return; }
     const hoy = new Date();
     const nueva = {equipoA:A, equipoB:B, golesA:gA, golesB:gB, goleadores:gols,
       dia: hoy.toLocaleDateString("es-AR", {day:"2-digit", month:"2-digit"})};

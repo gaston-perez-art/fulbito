@@ -17,9 +17,14 @@ fecha y los puntos quedan pegados a la persona.
 4. Guardar. Queda visible para todo el grupo al instante.
 
 Solo se puede cargar a quien pasó por el sorteo: si no jugó, no puede sumar
-puntos. Para deshacer, cada fecha tiene un tachito en su tarjeta, en la pestaña
-Fechas, visible solo con la clave puesta. Borrar una fecha se lleva sus puntos y
-sus goles, y las que siguen se renumeran solas.
+puntos. Y los goles tienen que cerrar: la suma de los goleadores de cada equipo
+tiene que dar exactamente su marcador. El error se muestra mientras se carga y
+el botón de guardar queda bloqueado hasta que cierre.
+
+En la pestaña Fechas, con la clave puesta, cada tarjeta trae dos botones: el
+lápiz corrige el resultado y los goleadores de esa fecha, y el tacho la borra
+—se lleva sus puntos y sus goles, y las que siguen se renumeran solas—. Los
+equipos no se editan: si están mal, se borra la fecha y se carga de nuevo.
 
 ## Sorteo de capitanes
 

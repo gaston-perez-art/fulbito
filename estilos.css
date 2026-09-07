@@ -282,6 +282,13 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
 .tacho svg{pointer-events:none}
 .tacho:active{background:rgba(255,107,91,.16);border-color:rgba(255,107,91,.5);
   color:var(--brasa)}
+.editor{margin-top:13px;padding-top:13px;border-top:1px solid var(--linea)}
+.editor .marcador input{padding:10px}
+.editor .anotador{padding:5px 0}
+.editor #eChequeo:not(:empty){margin-top:12px}
+.editor .acciones{display:flex;gap:9px;margin-top:6px}
+.editor .acciones .secundario{flex:0 0 auto;width:auto;margin-top:0;padding:14px 18px}
+.editor .acciones .primario{flex:1;margin-top:0;padding:14px}
 .fecha .borrar{display:flex;align-items:center;gap:8px;margin-top:11px}
 .fecha .borrar span{flex:1;color:var(--brasa);font-size:var(--t-2);line-height:1.35}
 .fecha .borrar button{border-radius:10px;padding:10px 14px;font-size:var(--t-2);font-weight:600;

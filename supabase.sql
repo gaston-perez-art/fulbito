@@ -145,6 +145,33 @@ begin
 end;
 $$;
 
+-- corrige una fecha ya cargada: el resultado y los goleadores. Los equipos no
+-- se tocan; si están mal, se borra la fecha y se carga de nuevo.
+create or replace function public.editar_fecha(p_clave text, p_n int,
+                                               p_goles_a int, p_goles_b int,
+                                               p_goleadores jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+begin
+  if not public.clave_ok(p_clave) then
+    raise exception 'clave incorrecta' using errcode = '42501';
+  end if;
+  if p_goles_a < 0 or p_goles_b < 0 then
+    raise exception 'el marcador no puede ser negativo';
+  end if;
+  update public.fechas
+     set goles_a = p_goles_a, goles_b = p_goles_b,
+         goleadores = coalesce(p_goleadores, '{}'::jsonb)
+   where n = p_n;
+  if not found then
+    raise exception 'la fecha % no existe', p_n;
+  end if;
+end;
+$$;
+
 -- guarda la configuración del pozo
 create or replace function public.guardar_pozo(p_clave text, p_cuota int,
                                                p_ajuste int, p_nota text)
@@ -202,12 +229,14 @@ $$;
 revoke execute on function public.verificar_clave(text)                                    from public;
 revoke execute on function public.cargar_fecha(text, text, text[], text[], int, int, jsonb) from public;
 revoke execute on function public.borrar_fecha(text, int)                                  from public;
+revoke execute on function public.editar_fecha(text, int, int, int, jsonb)                 from public;
 revoke execute on function public.guardar_pozo(text, int, int, text)                       from public;
 revoke execute on function public.reemplazar_todo(text, jsonb)                             from public;
 
 grant execute on function public.verificar_clave(text)                                    to anon, authenticated;
 grant execute on function public.cargar_fecha(text, text, text[], text[], int, int, jsonb) to anon, authenticated;
 grant execute on function public.borrar_fecha(text, int)                                  to anon, authenticated;
+grant execute on function public.editar_fecha(text, int, int, int, jsonb)                 to anon, authenticated;
 grant execute on function public.guardar_pozo(text, int, int, text)                       to anon, authenticated;
 grant execute on function public.reemplazar_todo(text, jsonb)                              to anon, authenticated;
 
