@@ -10,38 +10,34 @@ fecha y los puntos quedan pegados a la persona.
 
 ## Cómo cargar una fecha
 
-1. Entrar al sitio y tocar el candado en la barra de arriba.
-2. Poner la clave de carga (la tiene el encargado de la planilla).
-3. Tocar el nombre de cada jugador: una vez lo pone en el equipo A, dos veces en
-   el B, tres lo saca. Solo aparecen los 14 fijos; los invitados juegan pero no
-   puntúan.
-4. Cargar el marcador y, abajo, los goles de cada uno.
-5. Guardar. Queda visible para todo el grupo al instante.
+1. Antes de jugar, en **Sorteo**, marcar quiénes vienen. Entran diez.
+2. Al terminar: candado, clave, y los diez ya aparecen en el equipo A.
+   Un toque pasa a cada uno al B, según cómo quedaron repartidos.
+3. Cargar el marcador y los goles de cada uno.
+4. Guardar. Queda visible para todo el grupo al instante.
 
-Si te equivocaste, cada fecha tiene un tachito arriba a la derecha de su tarjeta
-en la pestaña Fechas, visible solo después de entrar con la clave. Borrar una fecha se lleva
-sus puntos y sus goles, y las que siguen se renumeran solas. El cuadro de
-Respaldo copia todo el torneo como texto: sirve para guardarlo aparte y para
-restaurarlo si algo se rompe.
+Solo se puede cargar a quien pasó por el sorteo: si no jugó, no puede sumar
+puntos. Para deshacer, cada fecha tiene un tachito en su tarjeta, en la pestaña
+Fechas, visible solo con la clave puesta. Borrar una fecha se lleva sus puntos y
+sus goles, y las que siguen se renumeran solas.
 
 ## Sorteo de capitanes
 
-Antes del partido: marcás quiénes vinieron, sumás a mano a los que no están en
-la lista, y salen los dos capitanes de a uno. El primero que sale elige primero.
-El que ya fue capitán queda afuera del sorteo hasta que hayan pasado todos, y
-ahí la rueda se reinicia sola.
+Antes del partido: se marca quiénes vienen —hasta diez— y salen los dos capitanes
+de a uno. El primero que sale elige primero; el reparto se resuelve por WhatsApp.
+El que ya fue capitán queda afuera del sorteo hasta que hayan pasado todos, y ahí
+la rueda se reinicia sola.
 
-No pide clave: el sorteo pasa en la cancha y pedir clave ahí es fricción. El
-costo es que la lista de confirmados y el historial de capitanes viven en el
+No pide clave: el sorteo pasa en la cancha y pedir clave ahí es fricción. El costo
+es que la lista de los que vienen y el historial de capitanes viven en el
 `localStorage` del teléfono que sortea, no en la base.
 
 ## El pozo
 
-Aparte de la cancha, cada jugador pone una cuota por fecha jugada. El total se
-calcula solo: presencias cargadas × cuota, más un ajuste manual para lo que el
-cálculo no ve (invitados que ponen, una fecha que se pagó distinto). La cuota,
-el ajuste y el texto de qué se hace con el pozo se editan desde la pantalla de
-carga, con la clave.
+Cada jugador pone una cuota por fecha jugada, aparte de la cancha. El total se
+calcula solo: presencias cargadas × cuota. No se lleva a mano y no hay ajustes,
+así que cualquiera puede reconstruir el número mirando las fechas. La cuota se
+edita desde la pantalla de carga, con la clave.
 
 ## Cómo está armado
 
@@ -53,6 +49,7 @@ Sin build, sin dependencias, sin framework. Cuatro archivos:
 | `estilos.css`  | Todo el diseño                                          |
 | `app.js`       | Cálculo de tabla y goleadores, vistas, capa de datos    |
 | `jugadores.js` | El plantel y las fotos                                  |
+| `manifest.json`| Nombre e íconos para agregarlo a la pantalla de inicio   |
 | `config.js`    | URL y anon key del proyecto de Supabase                 |
 | `supabase.sql` | Esquema, RLS y funciones de carga                       |
 
