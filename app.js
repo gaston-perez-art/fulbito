@@ -429,34 +429,105 @@ function vSorteo(){
     </div>`;
 }
 
-function vReglas(){
-  const R = [
-    ["Qué es esto",
-     "Un torneo de " + TOTAL_FECHAS + " fechas donde el que compite es el jugador, no el equipo. " +
-     "Los equipos se rearman todos los sábados, pero los puntos quedan pegados a la persona. " +
-     "Campeón es el que más puntos junta en toda la temporada."],
-    ["Cuándo",
-     TOTAL_FECHAS + " fechas, los sábados. Cancha y horario a definir."],
-    ["Quién juega",
-     "Se anota en el grupo de WhatsApp. Entran los primeros " + POR_FECHA +
-     " por orden de anotación."],
-    ["El partido",
-     "Fútbol 5. Los dos capitanes salen del sorteo que se hace en la app, y después " +
-     "reparten los equipos por WhatsApp. El que sale primero elige primero."],
-    ["Los puntos",
-     "Cada fecha te deja 3 puntos si ganás, 1 si empatás y 0 si perdés. Son tuyos y no " +
-     "del equipo: la semana que viene jugás con otros y te los llevás igual. " +
-     "Si dos terminan con los mismos puntos, desempata la diferencia de gol, después " +
-     "los goles a favor y después los partidos ganados."],
-    ["El pozo",
-     "Aparte de lo que sale la cancha, cada uno pone " + plata(pozo.cuota) +
-     " por fecha jugada. Se acumula toda la temporada y se ve en la pestaña Pozo."],
-    ["El registro",
-     "Al terminar se pasan resultado y goleadores al grupo y se cargan acá. Puede cargar " +
-     "cualquiera que tenga la clave. Lo cargado queda firme a las 48 horas."]
+// Las reglas viven acá una sola vez: de esta lista salen la pestaña Reglas y
+// las respuestas del buscador. "claves" son las palabras con las que la gente
+// pregunta lo mismo — plata, guita, cuánto sale — y que no están en el texto.
+function reglas(){
+  return [
+    {t:"Qué es esto",
+     d:"Un torneo de " + TOTAL_FECHAS + " fechas donde el que compite es el jugador, no el equipo. " +
+       "Los equipos se rearman todos los sábados, pero los puntos quedan pegados a la persona. " +
+       "Campeón es el que más puntos junta en toda la temporada.",
+     c:"torneo objetivo campeon ganador gana premio funciona sirve trata temporada apertura individual"},
+    {t:"Cuándo",
+     d:TOTAL_FECHAS + " fechas, los sábados. Cancha y horario a definir.",
+     c:"cuando dia dias horario hora cancha donde lugar juega jugar juego sabado sabados empieza arranca termina cierra duracion"},
+    {t:"Quién juega",
+     d:"Se anota en el grupo de WhatsApp. Entran los primeros " + POR_FECHA + " por orden de anotación.",
+     c:"quien quienes anotar anotarse anote lista whatsapp grupo cupo lugares entra entro tarde primeros orden invitado sobra falta faltar gente sumar sumo traer llevar amigo hermano primo"},
+    {t:"El partido",
+     d:"Fútbol 5. Los dos capitanes salen del sorteo que se hace en la app, y después " +
+       "reparten los equipos por WhatsApp. El que sale primero elige primero.",
+     c:"partido futbol cinco equipos capitan capitanes sorteo sortear reparto armado dividir eleccion elegir elige primero"},
+    {t:"Los puntos",
+     d:"Cada fecha te deja 3 puntos si ganás, 1 si empatás y 0 si perdés. Son tuyos y no " +
+       "del equipo: la semana que viene jugás con otros y te los llevás igual. " +
+       "Si dos terminan con los mismos puntos, desempata la diferencia de gol, después " +
+       "los goles a favor y después los partidos ganados.",
+     c:"puntos punto gane gano empate empato empatar perdi perder pierdo desempate desempata diferencia goles tabla posiciones suma cuantos vale"},
+    {t:"El pozo",
+     d:"Aparte de lo que sale la cancha, cada uno pone " + plata(pozo.cuota) +
+       " por fecha jugada. Se acumula toda la temporada y se ve en la pestaña Pozo.",
+     c:"pozo plata guita dinero cuota pagar pago pone cuanto sale cuesta acumulado premio bolsa"},
+    {t:"El registro",
+     d:"Al terminar se pasan resultado y goleadores al grupo y se cargan acá. Puede cargar " +
+       "cualquiera que tenga la clave. Lo cargado queda firme a las 48 horas.",
+     c:"cargar carga anotar resultado goleadores clave reclamo reclamar error equivoque corregir editar borrar horas firme planilla mal"}
   ];
-  return R.map((r,i) => `<div class="regla"><div class="n">${i+1}</div>
-    <p><b>${r[0]}</b><small>${r[1]}</small></p></div>`).join("");
+}
+
+function vReglas(){
+  return reglas().map((r,i) => `<div class="regla"><div class="n">${i+1}</div>
+      <p><b>${r.t}</b><small>${r.d}</small></p></div>`).join("") +
+    `<div class="consulta">
+      <label>¿Te quedó una duda?</label>
+      <p class="hint">Escribila y busco en el reglamento.</p>
+      <div class="sumar">
+        <input type="text" id="duda" placeholder="¿Cuánto suma un empate?"
+               autocomplete="off" enterkeyhint="search">
+        <button class="secundario" id="btnDuda">Buscar</button>
+      </div>
+      <div id="respuesta"></div>
+    </div>`;
+}
+
+// Busca sobre el reglamento, sin inventar nada: si ninguna regla habla del
+// tema, lo dice y te manda con Gastón.
+const VACIAS = new Set(("que qué como cómo " +
+  "el la los las un una unos unas de del al a y o u en es son se si no me te " +
+  "lo le por para con sin sobre mi tu su hay pasa puedo podemos hace hacer tengo tiene " +
+  "vos yo nos nuestro esta este eso esa ese pero mas más muy ya").split(" "));
+
+function pelar(t){
+  return t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+}
+function buscarEnReglas(pregunta){
+  const terminos = pelar(pregunta).filter(p => p.length > 2 && !VACIAS.has(p));
+  if(!terminos.length) return [];
+  return reglas().map((r,i) => {
+    const titulo = pelar(r.t), cuerpo = pelar(r.d), claves = pelar(r.c);
+    let punto = 0;
+    terminos.forEach(t => {
+      // La coincidencia por prefijo sirve para plurales y conjugaciones
+      // —gol/goles, empate/empatás— pero pide cuatro letras de las dos partes:
+      // sin eso, cualquier palabra que arranque igual da un falso positivo.
+      const pega = (lista) => lista.some(p => p.length > 2 && (p === t ||
+        (p.length >= 4 && t.length >= 4 && (p.startsWith(t) || t.startsWith(p)))));
+      if(pega(titulo)) punto += 3;
+      if(pega(claves)) punto += 2;
+      if(pega(cuerpo)) punto += 1;
+    });
+    return {i, r, punto};
+  }).filter(x => x.punto > 0).sort((a,b) => b.punto - a.punto);
+}
+function responder(){
+  const campo = document.getElementById("duda");
+  const caja = document.getElementById("respuesta");
+  if(!campo || !caja) return;
+  const hallazgos = buscarEnReglas(campo.value);
+  if(!hallazgos.length){
+    caja.innerHTML = `<div class="respuesta nada">No encontré eso en el reglamento.
+      Preguntale a Gastón.</div>`;
+    return;
+  }
+  // la segunda solo si de verdad compite con la primera
+  const corte = hallazgos[0].punto * 0.6;
+  const mostrar = hallazgos.filter((h,k) => k === 0 || h.punto >= corte).slice(0, 2);
+  caja.innerHTML = mostrar.map((h,k) => `<div class="respuesta${k ? " segunda" : ""}">
+      <span class="de">Regla ${h.i+1} · ${h.r.t}</span>
+      <p>${h.r.d}</p>
+    </div>`).join("");
 }
 
 /* ====== carga ====== */
@@ -582,6 +653,9 @@ function revisarEdicion(){
   mostrar("eChequeo", "btnEditarOk",
           revisar(f.equipoA, f.equipoB, Number(gA.value), Number(gB.value), gols));
 }
+document.addEventListener("keydown", e => {
+  if(e.key === "Enter" && e.target.id === "duda"){ e.preventDefault(); responder(); }
+});
 document.addEventListener("input", e => {
   if(e.target.id === "gA" || e.target.id === "gB") revisarCarga();
   if(e.target.id === "eGA" || e.target.id === "eGB") revisarEdicion();
@@ -828,6 +902,8 @@ document.addEventListener("click", async e => {
     if(casilla) casilla.textContent = v;
     revisarCarga(); return;
   }
+
+  if(t.id === "btnDuda"){ responder(); return; }
 
   if(t.id === "btnPozo"){
     const nuevo = {...pozo,

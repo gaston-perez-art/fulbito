@@ -128,5 +128,15 @@ sábado y nadie abre el sitio.
 
 ## Reglamento
 
-Está en la pestaña **Reglas** del sitio, que se arma desde `vReglas()` en
+Está en la pestaña **Reglas**, y sale de la lista que devuelve `reglas()` en
 `app.js`. Ahí se cambia si se cambia una regla.
+
+Al pie hay una cajita para escribir una duda. No es un modelo de lenguaje: es
+una búsqueda sobre esa misma lista. Cada regla lleva un campo `c` con las
+palabras que la gente usa para preguntar lo mismo —plata, guita, cuánto sale— y
+que no están en el texto. La búsqueda saca acentos, descarta muletillas, puntúa
+las coincidencias en el título, en las claves y en el cuerpo, y muestra la regla
+que más puntúa. Si ninguna llega, contesta que no lo encontró y manda a preguntar.
+
+Poner un modelo de verdad ahí adentro exigiría una API key, y en un repo público
+eso lo paga cualquiera que lea el código. Para siete reglas, buscar alcanza.

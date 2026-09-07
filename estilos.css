@@ -187,10 +187,25 @@ section.on{display:block}
 
 /* ---------- reglas ---------- */
 .regla{display:flex;gap:13px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.06)}
-.regla .n{font-family:var(--display);font-size:var(--t-2);color:var(--reflector);flex:0 0 22px}
+.regla .n{font-family:var(--display);font-size:var(--t-2);color:var(--tenue);flex:0 0 22px}
 .regla p{margin:0;font-size:var(--t-3);line-height:1.55}
 .regla p b{display:block;margin-bottom:2px}
 .regla small{color:var(--tenue);font-size:var(--t-2)}
+
+/* ---------- la cajita de dudas al pie de las reglas ---------- */
+.consulta{margin-top:22px;padding:18px 16px 16px;border-radius:15px;
+  background:var(--piso);border:1px solid var(--linea)}
+.consulta>label{display:block;font-size:var(--t-0);font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--tenue);margin-bottom:6px}
+.consulta .hint{margin:0 0 12px}
+.respuesta{margin-top:14px;padding:13px 15px;border-radius:12px;
+  background:var(--alto);border:1px solid var(--linea)}
+.respuesta .de{display:block;font-size:var(--t-0);font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--reflector);margin-bottom:6px}
+.respuesta p{margin:0;font-size:var(--t-2);line-height:1.55}
+.respuesta.segunda{opacity:.62}
+.respuesta.segunda .de{color:var(--tenue)}
+.respuesta.nada{color:var(--tenue);font-size:var(--t-2);line-height:1.55}
 
 /* ---------- carga ---------- */
 .campo{margin-bottom:16px}
