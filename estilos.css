@@ -68,9 +68,12 @@ section.on{display:block}
   border:1px solid rgba(255,182,39,.34)}
 .puntero .caras{display:flex;flex:0 0 auto}
 .puntero .caras .av{width:46px;height:46px;font-size:18px}
-/* cada burbuja tapa a la de su izquierda: la última queda entera arriba */
-.puntero.multi .caras .av{width:38px;height:38px;font-size:14px;margin-right:-13px;
-  position:relative;box-shadow:0 0 0 2px #2E2450}
+/* Cada burbuja tapa a la de su izquierda. El recorte es una sombra oscura y
+   translúcida, no un color fijo: la placa es un degradado y cualquier color
+   plano queda desalineado justo ahí. Y sin el borde claro, que sumaba una
+   segunda línea encima del recorte. */
+.puntero.multi .caras .av{width:38px;height:38px;font-size:14px;margin-right:-11px;
+  position:relative;border-color:transparent;box-shadow:0 0 0 2px rgba(16,12,34,.92)}
 .puntero.multi .caras .av:nth-child(1){z-index:1}
 .puntero.multi .caras .av:nth-child(2){z-index:2}
 .puntero.multi .caras .av:nth-child(3){z-index:3}
