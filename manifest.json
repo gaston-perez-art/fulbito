@@ -1,0 +1,16 @@
+{
+  "name": "Apertura 2026 · Fútbol en Familia",
+  "short_name": "Apertura 26",
+  "description": "Tabla, goleadores y pozo del torneo de Fútbol en Familia.",
+  "lang": "es-AR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#141029",
+  "theme_color": "#141029",
+  "icons": [
+    {"src": "icono-180.png", "sizes": "180x180", "type": "image/png"},
+    {"src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}

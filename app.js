@@ -1,5 +1,6 @@
 /* ====== configuración ====== */
 const TOTAL_FECHAS = 12;
+const POR_FECHA = 10;             // los que entran a cada fecha
 const PLANTEL = window.JUGADORES || [];
 const FIJOS = PLANTEL.map(j => j.nombre);
 const FOTOS = Object.fromEntries(PLANTEL.filter(j => j.foto).map(j => [j.nombre, j.foto]));
@@ -82,9 +83,6 @@ async function guardarPozo(p){
   return await rpc("guardar_pozo", {p_clave:clave, p_cuota:p.cuota,
                                     p_ajuste:p.ajuste, p_nota:p.nota});
 }
-async function reemplazarTodo(lista){
-  return await rpc("reemplazar_todo", {p_clave:clave, p_fechas:lista});
-}
 
 /* ====== el sorteo vive en este teléfono ====== */
 // No va a Supabase a propósito: el sorteo pasa a las 18 en la cancha, con los
@@ -156,11 +154,11 @@ function goleadores(){
     .map(([n,c]) => ({n, c, pj:pj[n]||0}))
     .sort((x,y) => y.c-x.c || x.pj-y.pj || x.n.localeCompare(y.n));
 }
-// Cada presencia de un fijo en una fecha pone la cuota. El ajuste es la mano
-// del que carga: invitados que ponen, una fecha que se pagó distinto, lo que sea.
+// Cada presencia en una fecha pone la cuota, y eso es todo el pozo. Sin ajustes
+// a mano: un número que nadie puede reconstruir mirando las fechas no sirve.
 function presencias(f){ return f.equipoA.length + f.equipoB.length; }
 function totalPozo(){
-  return fechas.reduce((s,f) => s + presencias(f), 0) * pozo.cuota + pozo.ajuste;
+  return fechas.reduce((s,f) => s + presencias(f), 0) * pozo.cuota;
 }
 
 /* ====== vistas ====== */
@@ -220,9 +218,15 @@ function vTabla(){
       <div class="cab"><span class="c-jug">Jugador</span><span>Dif</span><span>Pts</span></div>
       ${filas}
     </div>
-    <p class="nota">PJ son las fechas jugadas; G, E y P cómo le fue en cada una;
-      el último par son los goles a favor y en contra del equipo en el que estuvo.
-      No hay mínimo de fechas: campeón es el que más puntos suma.</p>`;
+    <div class="glosario">
+      <div><b>PJ</b><span>Partidos jugados</span></div>
+      <div><b>G</b><span>Ganados · suma 3 puntos</span></div>
+      <div><b>E</b><span>Empatados · suma 1 punto</span></div>
+      <div><b>P</b><span>Perdidos · no suma</span></div>
+      <div><b>17-14</b><span>Goles a favor y en contra del equipo en el que jugó</span></div>
+      <div><b>DIF</b><span>Diferencia de gol: los que hizo menos los que recibió</span></div>
+      <div><b>PTS</b><span>Puntos acumulados. El que más suma es el campeón</span></div>
+    </div>`;
 }
 
 function vGoles(){
@@ -238,27 +242,21 @@ function vGoles(){
           (x.c / Math.max(x.pj,1)).toFixed(1).replace(".",",")} por fecha</div></div>
       <div class="bar"><i style="width:${Math.round(x.c/max*100)}%"></i></div>
       <div class="c">${x.c}</div>
-    </div>`).join("") +
-    `<p class="nota">Se cuentan solo los goles de los ${FIJOS.length} fijos.
-      Si empatan, va arriba el que jugó menos fechas.</p>`;
+    </div>`).join("");
 }
 
 function vPozo(){
   if(cargando) return `<div class="vacio">Cargando…</div>`;
   const pres = fechas.reduce((s,f) => s + presencias(f), 0);
   const total = totalPozo();
-  const promedio = fechas.length ? pres / fechas.length : 0;
-  const proyectado = fechas.length
-    ? Math.round(promedio * TOTAL_FECHAS) * pozo.cuota + pozo.ajuste
-    : 10 * TOTAL_FECHAS * pozo.cuota;
+  const objetivo = TOTAL_FECHAS * POR_FECHA * pozo.cuota;
+  const avance = objetivo ? Math.min(100, Math.round(total / objetivo * 100)) : 0;
 
-  const desglose = fechas.length
-    ? [...fechas].reverse().map(f => `<div class="linea">
-        <span class="q">Fecha ${f.n}</span>
-        <span class="m">${presencias(f)} jugadores</span>
-        <span class="v">${plata(presencias(f) * pozo.cuota)}</span>
-      </div>`).join("")
-    : "";
+  const desglose = [...fechas].reverse().map(f => `<div class="linea">
+      <span class="q">Fecha ${f.n}</span>
+      <span class="m">${presencias(f)} jugadores</span>
+      <span class="v">${plata(presencias(f) * pozo.cuota)}</span>
+    </div>`).join("");
 
   return `<div class="pozo">
       <div class="brillo" aria-hidden="true"></div>
@@ -266,28 +264,14 @@ function vPozo(){
       <div class="cara" aria-hidden="true">🤑</div>
       <div class="rot">Pozo acumulado</div>
       <div class="monto">${plata(total)}</div>
-      <div class="sub">${fechas.length} ${fechas.length === 1 ? "fecha" : "fechas"} ·
-        ${pres} ${pres === 1 ? "presencia" : "presencias"} · ${plata(pozo.cuota)} cada una</div>
+      <div class="avance-pozo"><i style="width:${avance}%"></i></div>
+      <div class="sub">${avance}% del objetivo de ${plata(objetivo)}</div>
     </div>
-    <div class="proyeccion">
-      <b>${plata(proyectado)}</b>
-      <span>es a lo que llega el pozo si se juegan las ${TOTAL_FECHAS} fechas
-        a este ritmo${fechas.length ? "" : " con 10 por fecha"}.</span>
-    </div>
-    ${pozo.nota
-      ? `<div class="destino">${pozo.nota}</div>`
-      : `<div class="destino tenue">Falta definir qué se hace con el pozo.
-          Se decide en el grupo y se escribe acá.</div>`}
     ${desglose ? `<div class="campo" style="margin-top:22px">
       <label>Fecha por fecha</label>
-      <div class="desglose">${desglose}
-        ${pozo.ajuste ? `<div class="linea ajuste">
-          <span class="q">Ajuste</span><span class="m">carga manual</span>
-          <span class="v">${pozo.ajuste > 0 ? "+" : ""}${plata(pozo.ajuste)}</span></div>` : ""}
-      </div></div>` : `<div class="vacio" style="padding:26px 20px">El pozo arranca
-        con la primera fecha.</div>`}
-    <p class="nota">Cada jugador pone ${plata(pozo.cuota)} por fecha jugada, aparte de la cancha.
-      El total sale de las presencias cargadas${pozo.ajuste ? ", más el ajuste manual" : ""}.</p>`;
+      <div class="desglose">${desglose}</div></div>`
+      : `<div class="vacio" style="padding:26px 20px">El pozo arranca con la primera fecha.</div>`}
+    <p class="nota">Cada jugador pone ${plata(pozo.cuota)} por fecha jugada, aparte de la cancha.</p>`;
 }
 
 function vFechas(){
@@ -315,11 +299,17 @@ function vFechas(){
       <div class="top"><span>Fecha ${f.n}</span>
         <span class="der">${f.dia||""}${tacho}</span></div>
       <div class="duelo">
-        <div class="lado"><b>Equipo A</b>${f.equipoA.join(", ")}</div>
+        <div class="lado">
+          <div class="caritas">${f.equipoA.map(avatar).join("")}</div>
+          <div class="quienes">${f.equipoA.join(", ")}</div>
+        </div>
         <div class="res"><span class="${f.golesA<f.golesB?"pierde":""}">${f.golesA}</span>
           <span class="punto">·</span>
           <span class="${f.golesB<f.golesA?"pierde":""}">${f.golesB}</span></div>
-        <div class="lado der"><b>Equipo B</b>${f.equipoB.join(", ")}</div>
+        <div class="lado der">
+          <div class="caritas">${f.equipoB.map(avatar).join("")}</div>
+          <div class="quienes">${f.equipoB.join(", ")}</div>
+        </div>
       </div>
       ${an ? `<div class="anot">Goles: ${an}</div>` : ""}
       ${pie}
@@ -337,7 +327,6 @@ function vSorteo(){
   }).join("");
 
   const listos = vinieron.length;
-  const pendientes = vinieron.filter(n => !yaFueron.includes(n) && !caps.includes(n));
   const puede = listos >= 2 && caps.length < 2 && !sorteando;
   const rotulo = caps.length === 0 ? "Sortear el primer capitán"
                                    : "Sortear el segundo capitán";
@@ -352,8 +341,7 @@ function vSorteo(){
   };
 
   return `<div class="campo">
-      <label>Quiénes vinieron · ${listos} ${listos === 1 ? "confirmado" : "confirmados"}</label>
-      <p class="hint">Tocá a los que están. Después sorteás.</p>
+      <label>Quiénes vienen · ${listos} de ${POR_FECHA}</label>
       <div class="chips" id="vinieron">${chips}</div>
       <div class="sumar">
         <input type="text" id="nuevoInv" placeholder="Sumar a alguien que no está en la lista"
@@ -368,12 +356,8 @@ function vSorteo(){
       ? `<button class="primario" id="btnOtraRonda">Sortear otra vez</button>`
       : `<button class="primario" id="btnSortear" ${puede ? "" : "disabled"}>${rotulo}</button>
          ${caps.length ? `<button class="secundario" id="btnOtraRonda">Empezar de nuevo</button>` : ""}`}
-    <p class="hint" style="margin-top:14px">${
-      caps.length === 2
-        ? `${caps[0]} elige primero. El armado de los equipos sigue afuera de la app.`
-        : listos < 2
-          ? "Marcá al menos dos jugadores para poder sortear."
-          : `Salen de los ${pendientes.length} que todavía no fueron capitanes.`}</p>
+    <p class="hint" style="margin-top:14px">El armado del equipo se define por
+      votación en WhatsApp.</p>
 
     <div class="campo" style="margin-top:26px">
       <label>Ya fueron capitanes</label>
@@ -382,31 +366,47 @@ function vSorteo(){
            <button class="secundario" id="btnReiniciar">Reiniciar la rueda de capitanes</button>`
         : `<p class="hint">Todavía nadie. A medida que salgan, quedan afuera del
             sorteo hasta que hayan pasado todos.</p>`}
-      <p class="hint" style="margin-top:12px">Esta lista y los confirmados viven en este
-        teléfono, no en la base. Si abrís el sitio en otro aparato, arranca de cero.</p>
+      <p class="hint" style="margin-top:12px">La rueda vive en este teléfono.</p>
     </div>`;
 }
 
 function vReglas(){
   const R = [
-    ["Cuándo","${TOTAL} fechas, sábados a las 18, del 12/09 al 28/11. Hay dos sábados comodín para reprogramar lo que se suspenda por lluvia."],
-    ["Quién juega y quién puntúa","Los ${N} fijos suman puntos y goles: ${LISTA}. Los invitados juegan, pero no entran en la tabla."],
-    ["El partido","Fútbol 5, largo y corrido. Los equipos se arman antes de arrancar y no se tocan más: el resultado de la fecha es el del partido completo."],
-    ["Los puntos","3 por ganar, 1 por empatar, 0 por perder, y el punto es del jugador, no del equipo. Desempata la diferencia de gol, después los goles a favor, después los partidos ganados. Campeón es el que más puntos suma, sin mínimo de fechas."],
-    ["El pozo","Aparte de la cancha, cada uno pone ${CUOTA} por fecha jugada. Se acumula toda la temporada y se ve en la pestaña Pozo."],
-    ["El registro","Al terminar se pasan resultado y goleadores al grupo y se cargan acá. Puede cargar cualquiera que tenga la clave; el responsable es Gastón. Lo cargado queda firme a las 48 horas."]
+    ["Qué es esto",
+     "Un torneo de " + TOTAL_FECHAS + " fechas donde el que compite es el jugador, no el equipo. " +
+     "Los equipos se rearman todos los sábados, pero los puntos quedan pegados a la persona. " +
+     "Campeón es el que más puntos junta en toda la temporada."],
+    ["Cuándo",
+     TOTAL_FECHAS + " fechas, los sábados. Cancha y horario a definir."],
+    ["Quién juega",
+     "Se anota en el grupo de WhatsApp. Entran los primeros " + POR_FECHA +
+     " por orden de anotación."],
+    ["El partido",
+     "Fútbol 5. Los dos capitanes salen del sorteo que se hace en la app, y después " +
+     "reparten los equipos por WhatsApp. El que sale primero elige primero."],
+    ["Los puntos",
+     "Cada fecha te deja 3 puntos si ganás, 1 si empatás y 0 si perdés. Son tuyos y no " +
+     "del equipo: la semana que viene jugás con otros y te los llevás igual. " +
+     "Si dos terminan con los mismos puntos, desempata la diferencia de gol, después " +
+     "los goles a favor y después los partidos ganados."],
+    ["El pozo",
+     "Aparte de lo que sale la cancha, cada uno pone " + plata(pozo.cuota) +
+     " por fecha jugada. Se acumula toda la temporada y se ve en la pestaña Pozo."],
+    ["El registro",
+     "Al terminar se pasan resultado y goleadores al grupo y se cargan acá. Puede cargar " +
+     "cualquiera que tenga la clave. Lo cargado queda firme a las 48 horas."]
   ];
   return R.map((r,i) => `<div class="regla"><div class="n">${i+1}</div>
-    <p><b>${r[0]}</b><small>${r[1]
-      .replace("${TOTAL}", TOTAL_FECHAS)
-      .replace("${N}", FIJOS.length)
-      .replace("${LISTA}", FIJOS.join(", "))
-      .replace("${CUOTA}", plata(pozo.cuota))}</small></p></div>`).join("");
+    <p><b>${r[0]}</b><small>${r[1]}</small></p></div>`).join("");
 }
 
 /* ====== carga ====== */
+// Los que salieron del sorteo entran directo al equipo A. Un toque los pasa
+// al B: el armado se decidió en WhatsApp y acá solo se transcribe.
 function nuevoForm(){
-  return {equipos:{}, golesA:"", golesB:"", goleadores:{}, msg:null};
+  const equipos = {};
+  vinieron.filter(n => FIJOS.includes(n)).forEach(n => equipos[n] = "a");
+  return {equipos, golesA:"", golesB:"", goleadores:{}, msg:null};
 }
 function vCarga(){
   if(!desbloqueado){
@@ -420,28 +420,35 @@ function vCarga(){
   }
   if(!form) form = nuevoForm();
   const n = fechas.length + 1;
-  const chips = FIJOS.map(j => {
+
+  // Solo se carga a quien pasó por el sorteo: si no jugó, no puede sumar puntos.
+  const habilitados = vinieron.filter(j => FIJOS.includes(j));
+  if(!habilitados.length){
+    return `<div class="vacio">Antes de cargar la fecha hay que marcar quiénes
+      vinieron, en la pestaña Sorteo.</div>`;
+  }
+
+  const chips = habilitados.map(j => {
     const e = form.equipos[j];
     return `<button class="chip ${e||""}" data-j="${j}">${j}${e ? " " + e.toUpperCase() : ""}</button>`;
   }).join("");
-  const sel = FIJOS.filter(j => form.equipos[j]);
+  const sel = habilitados.filter(j => form.equipos[j]);
   const anot = sel.map(j => `<div class="anotador">
-      <div class="nm">${j} <span style="color:var(--tenue);font-size:12px">${form.equipos[j].toUpperCase()}</span></div>
+      <div class="nm">${j} <span style="color:var(--tenue);font-size:var(--t-2)">${form.equipos[j].toUpperCase()}</span></div>
       <button data-g="${j}" data-d="-1">−</button>
       <div class="v">${form.goleadores[j]||0}</div>
       <button data-g="${j}" data-d="1">+</button>
     </div>`).join("");
   const cA = sel.filter(j => form.equipos[j]==="a").length;
   const cB = sel.filter(j => form.equipos[j]==="b").length;
-  const estado = conectado
-    ? `<div class="aviso ok">Sincronizado. Lo que cargues lo ve todo el grupo.</div>`
-    : `<div class="aviso err"><b>Sin conexión con la base.</b> No guardes hasta que vuelva:
-        lo que cargues ahora se pierde.<br>
-        <span class="mono">${diag || "sin detalle"}</span></div>`;
-  return estado + `${form.msg ? `<div class="aviso ${form.msg.t}">${form.msg.x}</div>` : ""}
+
+  return `${!conectado ? `<div class="aviso err"><b>Sin conexión con la base.</b>
+      No guardes hasta que vuelva: lo que cargues ahora se pierde.<br>
+      <span class="mono">${diag || "sin detalle"}</span></div>` : ""}
+    ${form.msg ? `<div class="aviso ${form.msg.t}">${form.msg.x}</div>` : ""}
     <div class="campo">
       <label>Fecha ${n} · equipos (${cA} vs ${cB})</label>
-      <p class="hint">Tocá una vez para el equipo A, dos veces para el B, tres para sacarlo.</p>
+      <p class="hint">Vienen del sorteo, todos en el A. Tocá para pasarlos al B.</p>
       <div class="chips" id="chips">${chips}</div>
     </div>
     <div class="campo"><label>Resultado</label>
@@ -450,35 +457,15 @@ function vCarga(){
         <span>a</span>
         <input type="number" id="gB" inputmode="numeric" value="${form.golesB}" placeholder="B">
       </div>
-      <p class="hint" style="text-align:center">izquierda equipo A · derecha equipo B</p>
     </div>
     ${sel.length ? `<div class="campo"><label>Goleadores</label>${anot}</div>` : ""}
     <button class="primario" id="btnGuardar">Guardar fecha ${n}</button>
-    <p class="hint" style="margin-top:12px">Para borrar una fecha ya cargada, andá a
-      Fechas y tocá el tachito de su tarjeta.</p>
 
-    <div class="campo" style="margin-top:26px">
-      <label>El pozo</label>
-      <p class="hint">La cuota se multiplica por cada presencia cargada. El ajuste suma o
-        resta a mano lo que el cálculo no ve: invitados que ponen, una fecha que se pagó distinto.</p>
-      <div class="dosCampos">
-        <div><small class="rotulo">Cuota por fecha</small>
-          <input type="number" id="pCuota" inputmode="numeric" value="${pozo.cuota}"></div>
-        <div><small class="rotulo">Ajuste</small>
-          <input type="number" id="pAjuste" inputmode="numeric" value="${pozo.ajuste}"></div>
-      </div>
-      <small class="rotulo" style="display:block;margin-top:12px">Qué se hace con el pozo</small>
-      <input type="text" id="pNota" value="${(pozo.nota||"").replace(/"/g,"&quot;")}"
-        placeholder="Se lo lleva el campeón, se reparte, se come un asado…">
-      <button class="secundario" id="btnPozo">Guardar el pozo</button>
-    </div>
-
-    <div class="campo" style="margin-top:26px">
-      <label>Respaldo</label>
-      <p class="hint">Copiá este texto y guardalo. Pegándolo acá y tocando Restaurar
-        se reemplazan todas las fechas de la base por las del respaldo.</p>
-      <textarea id="respaldo" rows="4">${JSON.stringify(fechas)}</textarea>
-      <button class="secundario" id="btnRestaurar">Restaurar desde el respaldo</button>
+    <div class="campo" style="margin-top:30px">
+      <label>Cuota del pozo</label>
+      <p class="hint">Lo que pone cada jugador por fecha jugada.</p>
+      <input type="number" id="pCuota" inputmode="numeric" value="${pozo.cuota}">
+      <button class="secundario" id="btnPozo">Guardar la cuota</button>
     </div>`;
 }
 
@@ -564,6 +551,30 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   if(b.dataset.v === "pozo") animarPozo();
 });
 
+/* ====== swipe entre pestañas ====== */
+// Se descarta cualquier gesto que sea más vertical que horizontal, para no
+// robarle el scroll a la página, y los que arrancan sobre un campo de texto.
+(function swipe(){
+  const pestanas = [...document.querySelectorAll("nav button")];
+  let x0 = 0, y0 = 0, valido = false;
+  addEventListener("touchstart", e => {
+    if(e.touches.length !== 1){ valido = false; return; }
+    const el = e.target instanceof Element ? e.target : null;
+    if(el && el.closest("input, textarea, .chips")){ valido = false; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; valido = true;
+  }, {passive:true});
+  addEventListener("touchend", e => {
+    if(!valido) return;
+    valido = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - x0, dy = t.clientY - y0;
+    if(Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const i = pestanas.findIndex(b => b.classList.contains("on"));
+    const destino = pestanas[i + (dx < 0 ? 1 : -1)];
+    if(destino) destino.click();
+  }, {passive:true});
+})();
+
 document.addEventListener("click", async e => {
   // El dedo cae donde cae: sobre el svg del tacho, sobre la × de un chip, sobre
   // el texto de un botón. Subimos al elemento que lleva la acción antes de
@@ -596,7 +607,9 @@ document.addEventListener("click", async e => {
   }
   if(t.dataset.vino){
     const j = t.dataset.vino;
-    vinieron = vinieron.includes(j) ? vinieron.filter(n => n !== j) : vinieron.concat(j);
+    if(vinieron.includes(j)) vinieron = vinieron.filter(n => n !== j);
+    else if(vinieron.length < POR_FECHA) vinieron = vinieron.concat(j);
+    else return;                              // entran diez, y no hay más que decir
     guardarLocal(); repintar("v-sorteo", vSorteo); return;
   }
   if(t.id === "btnInvitado"){
@@ -604,7 +617,7 @@ document.addEventListener("click", async e => {
     const nombre = campo.value.trim();
     if(!nombre) return;
     if(!plantelDelDia().includes(nombre)) invitados = invitados.concat(nombre);
-    if(!vinieron.includes(nombre)) vinieron = vinieron.concat(nombre);
+    if(!vinieron.includes(nombre) && vinieron.length < POR_FECHA) vinieron = vinieron.concat(nombre);
     campo.value = "";
     guardarLocal(); repintar("v-sorteo", vSorteo); return;
   }
@@ -681,11 +694,8 @@ document.addEventListener("click", async e => {
   }
 
   if(t.id === "btnPozo"){
-    const nuevo = {
-      cuota: Math.max(0, Math.round(Number(document.getElementById("pCuota").value) || 0)),
-      ajuste: Math.round(Number(document.getElementById("pAjuste").value) || 0),
-      nota: document.getElementById("pNota").value.trim()
-    };
+    const nuevo = {...pozo,
+      cuota: Math.max(0, Math.round(Number(document.getElementById("pCuota").value) || 0))};
     t.disabled = true;
     try{
       await guardarPozo(nuevo);
@@ -736,27 +746,6 @@ document.addEventListener("click", async e => {
     }
   }
 
-  if(t.id === "btnRestaurar"){
-    let d;
-    try{
-      d = JSON.parse(document.getElementById("respaldo").value);
-      if(!Array.isArray(d)) throw new Error("formato");
-    }catch(err){
-      form.msg = {t:"err", x:"El respaldo no se pudo leer."};
-      repintarCarga(); avisar(); return;
-    }
-    t.disabled = true;
-    try{
-      await reemplazarTodo(d.map((f,i) => ({n:i+1, dia:f.dia||"", equipo_a:f.equipoA,
-        equipo_b:f.equipoB, goles_a:f.golesA, goles_b:f.golesB, goleadores:f.goleadores||{}})));
-      await leer();
-      form = nuevoForm();
-      form.msg = {t:"ok", x:"Restauradas " + fechas.length + " fechas."};
-    }catch(err){
-      form.msg = {t:"err", x:"No se pudo restaurar: " + err.message};
-    }
-    pintar(); verCarga(); return;
-  }
 });
 
 function alertaFechas(texto){
