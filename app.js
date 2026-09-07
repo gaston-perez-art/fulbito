@@ -122,7 +122,7 @@ function tono(n){
 }
 function avatar(n){
   const f = FOTOS[n];
-  if(f) return `<img class="av" src="${f}" alt="" loading="lazy" decoding="async">`;
+  if(f) return `<img class="av" src="${f}" alt="" decoding="async">`;
   return `<div class="av" style="background:hsl(${tono(n)} 27% 31%)" aria-hidden="true">${
     [...n][0].toUpperCase()}</div>`;
 }
