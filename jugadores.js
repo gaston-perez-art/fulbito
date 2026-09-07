@@ -10,7 +10,7 @@ window.JUGADORES = [
   {nombre:"Maxi",    foto:"fotos/maxi.jpg"},
   {nombre:"Santi",   foto:"fotos/santi.jpg"},
   {nombre:"Aarón",   foto:"fotos/aaron.jpg"},
-  {nombre:"Juli",    foto:""},
+  {nombre:"Juli",    foto:"fotos/juli.jpg"},
   {nombre:"Tiago",   foto:"fotos/tiago.jpg"},
   {nombre:"Eze",     foto:"fotos/eze.jpg"},
   {nombre:"Andii",   foto:"fotos/andii.jpg"},
