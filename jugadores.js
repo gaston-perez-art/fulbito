@@ -7,14 +7,14 @@ window.JUGADORES = [
   {nombre:"Darío",   foto:"fotos/dario.jpg"},
   {nombre:"Bastián", foto:"fotos/bastian.jpg"},
   {nombre:"Elián",   foto:"fotos/elian.jpg"},
-  {nombre:"Maxi",    foto:""},
+  {nombre:"Maxi",    foto:"fotos/maxi.jpg"},
   {nombre:"Santi",   foto:"fotos/santi.jpg"},
-  {nombre:"Aarón",   foto:""},
+  {nombre:"Aarón",   foto:"fotos/aaron.jpg"},
   {nombre:"Juli",    foto:""},
-  {nombre:"Tiago",   foto:""},
+  {nombre:"Tiago",   foto:"fotos/tiago.jpg"},
   {nombre:"Eze",     foto:""},
   {nombre:"Andii",   foto:"fotos/andii.jpg"},
   {nombre:"Gabi",    foto:""},
-  {nombre:"Eric",    foto:""},
+  {nombre:"Eric",    foto:"fotos/eric.jpg"},
   {nombre:"Víctor",  foto:""}
 ];
