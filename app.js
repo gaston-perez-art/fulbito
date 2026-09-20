@@ -194,8 +194,18 @@ function revisar(A, B, gA, gB){
 }
 
 /* ====== vistas ====== */
+// La forma de la tabla antes de que lleguen los datos. Ocupa el mismo lugar que
+// van a ocupar las filas, así que cuando aparecen no salta nada.
+function esqueleto(n){
+  return `<div class="cab"><span class="c-jug">Jugador</span><span>Dif</span><span>Pts</span></div>` +
+    Array.from({length:n}, () => `<div class="hueso">
+      <i class="chico"></i><i class="cara"></i>
+      <div><i class="nom"></i><i class="dato"></i></div>
+      <i class="chico"></i><i class="chico"></i>
+    </div>`).join("");
+}
 function vTabla(){
-  if(cargando) return `<div class="vacio">Cargando…</div>`;
+  if(cargando) return esqueleto(8);
   if(!conectado && !fechas.length) return `<div class="vacio">No se pudo leer la tabla.<br>
     <span class="mono">${diag}</span></div>`;
   const t = tabla();
@@ -695,14 +705,28 @@ function avisar(){
   if(a) a.scrollIntoView({block:"center", behavior:"smooth"});
 }
 
+// Mide el botón activo y lleva la luz hasta ahí. Hay que medir y no calcular:
+// el ancho de cada pestaña lo decide su texto, y hasta que no cargan las
+// fuentes ese ancho no es el definitivo.
+function luzNav(){
+  const b = document.querySelector("nav button.on"), luz = document.getElementById("navLuz");
+  if(!b || !luz) return;
+  luz.style.width = b.offsetWidth + "px";
+  luz.style.transform = `translateX(${b.offsetLeft}px)`;
+}
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button").forEach(x => x.classList.remove("on"));
   document.querySelectorAll("section").forEach(x => x.classList.remove("on"));
   b.classList.add("on");
   document.getElementById("v-" + b.dataset.v).classList.add("on");
+  luzNav();
   window.scrollTo({top:0});
   if(b.dataset.v === "pozo") animarPozo();
 });
+addEventListener("resize", luzNav);
+luzNav();
+// Con las fuentes puestas los botones cambian de ancho, así que se mide otra vez.
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(luzNav);
 
 /* ====== swipe entre pestañas ====== */
 // Se descarta cualquier gesto que sea más vertical que horizontal, para no

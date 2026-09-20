@@ -24,6 +24,18 @@
   --t-6: 28px;     /* título grande */
   --t-7: 42px;     /* la cifra */
   --t-campo: 16px; /* formularios: menos de 16 y iOS hace zoom al enfocar */
+
+  /* Cómo se mueve todo. Dos curvas y tres duraciones para toda la app, por la
+     misma razón que hay ocho tamaños de letra: si algo necesita una curva que
+     no está acá, o está mal pensado o falta una curva.
+     --salida arranca rápido y frena largo: es la de las cosas que aparecen, y
+     la que hace que un movimiento se lea como físico y no como un temporizador.
+     --suave es simétrica, para lo que solo cambia de color o de opacidad. */
+  --salida: cubic-bezier(.22,.68,0,1);
+  --suave:  cubic-bezier(.4,0,.2,1);
+  --toque: .13s;   /* respuesta al dedo: por encima de esto se siente lento */
+  --paso:  .26s;   /* cambios de estado */
+  --gesto: .42s;   /* entradas y recorridos largos */
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
@@ -36,10 +48,33 @@ button{touch-action:manipulation}
 :focus{outline:none}
 :focus-visible{outline:2px solid var(--tenue);outline-offset:2px;border-radius:8px}
 @media (prefers-reduced-motion:no-preference){
-  .chip,.primario,.secundario,nav button{
-    transition:transform .12s ease,background .16s ease,border-color .16s ease,color .16s ease}
-  .chip:active,.primario:active,.secundario:active{transform:scale(.96)}
+  .chip,.primario,.secundario,nav button,.tacho,.fecha .borrar button,.capitan{
+    transition:transform var(--toque) var(--suave),background var(--paso) var(--suave),
+               border-color var(--paso) var(--suave),color var(--paso) var(--suave),
+               box-shadow var(--paso) var(--suave),opacity var(--paso) var(--suave)}
+  .chip:active,.primario:active,.secundario:active,.tacho:active,
+  .fecha .borrar button:active{transform:scale(.96)}
+  /* El primario baja un pelo además de achicarse: el botón grande tiene que
+     sentirse como una tecla, no como una calcomanía que se encoge. */
+  .primario:active{transform:scale(.975) translateY(1px)}
+  input,textarea{transition:border-color var(--paso) var(--suave),
+                            box-shadow var(--paso) var(--suave)}
 }
+/* En el teléfono no existe el hover y un :hover pegajoso queda trabado después
+   de tocar. Esto es solo para el que abre la tabla en una notebook. */
+@media (hover:hover) and (pointer:fine){
+  nav button:hover{color:var(--hueso)}
+  .chip:hover{border-color:var(--tenue);color:var(--hueso)}
+  .chip.a:hover{border-color:var(--reflector);color:var(--reflector)}
+  .chip.b:hover{border-color:var(--menta);color:var(--menta)}
+  .primario:not(:disabled):hover{filter:brightness(1.07)}
+  .secundario:hover{border-color:var(--tenue);color:var(--hueso)}
+  .tacho:hover{color:var(--hueso);border-color:var(--tenue)}
+  .fila:hover{background:rgba(255,255,255,.028)}
+  .fecha:hover{border-color:#3D3470}
+}
+input:focus,textarea:focus{border-color:var(--tenue);
+  box-shadow:0 0 0 3px rgba(144,137,180,.14)}
 
 /* ---------- cabecera: cancha bajo reflectores ---------- */
 header{position:relative;overflow:hidden;padding:22px 18px 20px;
@@ -58,8 +93,23 @@ header{position:relative;overflow:hidden;padding:22px 18px 20px;
 .avance b{font-family:var(--display);font-size:var(--t-6);line-height:1}
 .avance span{color:var(--tenue);font-size:var(--t-2)}
 .barra{display:flex;gap:3px;margin-top:9px}
-.barra i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.10)}
+.barra i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.10);
+  transition:background var(--paso) var(--suave)}
 .barra i.on{background:var(--reflector)}
+/* Los segmentos jugados se prenden de a uno, de izquierda a derecha, como si
+   la temporada se estuviera llenando delante tuyo. */
+@media (prefers-reduced-motion:no-preference){
+  .barra i.on{animation:prendeFecha var(--paso) var(--salida)}
+  .barra i.on:nth-child(2){animation-delay:.05s}  .barra i.on:nth-child(3){animation-delay:.10s}
+  .barra i.on:nth-child(4){animation-delay:.15s}  .barra i.on:nth-child(5){animation-delay:.20s}
+  .barra i.on:nth-child(6){animation-delay:.25s}  .barra i.on:nth-child(7){animation-delay:.30s}
+  .barra i.on:nth-child(8){animation-delay:.35s}  .barra i.on:nth-child(9){animation-delay:.40s}
+  .barra i.on:nth-child(n+10){animation-delay:.45s}
+}
+@keyframes prendeFecha{
+  from{transform:scaleX(.2)}
+  to{transform:none}
+}
 
 /* ---------- navegación ---------- */
 nav{display:flex;gap:2px;padding:0 8px;background:rgba(27,22,56,.92);
@@ -67,19 +117,49 @@ nav{display:flex;gap:2px;padding:0 8px;background:rgba(27,22,56,.92);
     border-bottom:1px solid var(--linea);position:sticky;top:0;z-index:20}
 nav button{flex:1;background:none;border:0;color:var(--tenue);font-family:var(--texto);
   font-weight:600;font-size:var(--t-1);padding:14px 1px 12px;cursor:pointer;
-  border-bottom:2px solid transparent;white-space:nowrap}
-nav button.on{color:var(--hueso);border-bottom-color:var(--reflector)}
+  white-space:nowrap;position:relative;z-index:1}
+nav button.on{color:var(--hueso)}
 nav .llave{flex:0 0 34px;font-size:var(--t-2)}
+/* La luz recorre la barra en lugar de saltar de pestaña en pestaña. La posición
+   la mide el JS, porque el ancho de cada botón lo decide el texto. Si el JS no
+   llegó a medirla todavía queda de ancho cero, invisible, y no molesta. */
+.nav-luz{position:absolute;left:0;bottom:0;height:2px;width:0;border-radius:2px;
+  background:var(--reflector);pointer-events:none;
+  transition:transform var(--paso) var(--salida),width var(--paso) var(--salida)}
 
 main{padding:18px 14px 0}
 section{display:none}
-section.on{display:block}
+section.on{display:block;animation:entraSeccion var(--gesto) var(--salida)}
+/* Solo la sección, no sus hijos: adentro hay vistas que se repintan a cada
+   toque —los chips del sorteo, el más y el menos— y animar cada elemento nuevo
+   sería un parpadeo constante. La clase .on cambia únicamente al cambiar de
+   pestaña, así que la entrada pasa cuando tiene que pasar y no más. */
+@keyframes entraSeccion{
+  from{opacity:.5;transform:translate3d(0,10px,0)}
+  to{opacity:1;transform:none}
+}
+/* Dos reglas para todas las entradas de acá abajo, y las dos salen del mismo
+   problema: el navegador suspende las animaciones de una pestaña que no está
+   al frente, y una animación suspendida se queda clavada en su primer
+   fotograma.
+
+   La primera es que ninguna lleva fill-mode. Con `both` el elemento se queda
+   en ese primer fotograma incluso antes de arrancar.
+
+   La segunda es que ninguna arranca desde opacity 0. Una sección que empieza
+   invisible y se queda ahí es una pantalla en blanco; empezando en .5 el peor
+   caso es un texto tenue que igual se lee. Salen de 0 solamente las cosas
+   efímeras —el bloque que cae, el destello—, que si no corren no dejan rastro.
+
+   Es la misma regla que ya seguían las dos animaciones de app.js: ninguna
+   puede dejar la app inservible si no llega a correr. */
 
 /* ---------- puntero ---------- */
 .puntero{display:flex;align-items:center;gap:14px;border-radius:16px;padding:15px 16px;
   margin-bottom:18px;overflow:hidden;
   background:linear-gradient(135deg,#3A2C0C 0%,#241E48 62%);
-  border:1px solid rgba(255,182,39,.34)}
+  border:1px solid rgba(255,182,39,.34);
+  box-shadow:0 2px 4px rgba(0,0,0,.2),0 18px 40px -24px rgba(255,182,39,.5)}
 .puntero .caras{display:flex;flex:0 0 auto}
 .puntero .caras .av{width:46px;height:46px;font-size:var(--t-4)}
 /* Cada burbuja tapa a la de su izquierda. El recorte es una sombra oscura y
@@ -121,6 +201,21 @@ section.on{display:block}
 .cab .c-jug{grid-column:3}
 .cab span:not(.c-jug){text-align:right}
 .fila{padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.05)}
+/* Las filas caen una después de otra. v-tabla se repinta pocas veces —al
+   cargar, al guardar una fecha, al corregirla—, y son justo los momentos en
+   los que mirar cómo se reordena la tabla es la gracia. */
+@media (prefers-reduced-motion:no-preference){
+  .fila{animation:entraFila var(--gesto) var(--salida)}
+  .fila:nth-child(2){animation-delay:.02s}  .fila:nth-child(3){animation-delay:.04s}
+  .fila:nth-child(4){animation-delay:.06s}  .fila:nth-child(5){animation-delay:.08s}
+  .fila:nth-child(6){animation-delay:.10s}  .fila:nth-child(7){animation-delay:.12s}
+  .fila:nth-child(8){animation-delay:.14s}  .fila:nth-child(9){animation-delay:.16s}
+  .fila:nth-child(n+10){animation-delay:.18s}
+}
+@keyframes entraFila{
+  from{opacity:.5;transform:translate3d(0,8px,0)}
+  to{opacity:1;transform:none}
+}
 .fila .rk{font-family:var(--display);font-size:var(--t-2);color:var(--tenue);text-align:center}
 .fila .id{min-width:0}
 .fila .nm{font-weight:600;font-size:var(--t-3);line-height:1.25;
@@ -152,7 +247,8 @@ section.on{display:block}
 
 /* ---------- fechas ---------- */
 .fecha{background:var(--piso);border:1px solid var(--linea);border-radius:12px;
-  padding:14px 15px;margin-bottom:11px}
+  padding:14px 15px;margin-bottom:11px;
+  box-shadow:0 1px 2px rgba(0,0,0,.24),0 10px 26px -18px rgba(0,0,0,.9)}
 .fecha .top{display:flex;justify-content:space-between;align-items:center;
   color:var(--tenue);font-size:var(--t-0);letter-spacing:.12em;text-transform:uppercase;font-weight:600}
 .duelo{display:flex;align-items:center;gap:10px;margin:11px 0 4px}
@@ -181,7 +277,9 @@ section.on{display:block}
   text-transform:uppercase;color:var(--tenue);margin-bottom:6px}
 .consulta .hint{margin:0 0 12px}
 .respuesta{margin-top:14px;padding:13px 15px;border-radius:12px;
-  background:var(--alto);border:1px solid var(--linea)}
+  background:var(--alto);border:1px solid var(--linea);
+  animation:entraSeccion var(--paso) var(--salida)}
+.respuesta.segunda{animation-delay:.07s}
 .respuesta .de{display:block;font-size:var(--t-0);font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:var(--reflector);margin-bottom:6px}
 .respuesta p{margin:0;font-size:var(--t-2);line-height:1.55}
@@ -213,7 +311,12 @@ input[type=text],input[type=number],input[type=password]{
 .secundario{width:100%;background:none;border:1px solid var(--linea);color:var(--tenue);
   border-radius:11px;padding:12px;font-family:var(--texto);font-size:var(--t-2);font-weight:600;
   cursor:pointer;margin-top:10px}
-.aviso{border-radius:10px;padding:11px 13px;font-size:var(--t-2);margin-bottom:14px}
+.aviso{border-radius:10px;padding:11px 13px;font-size:var(--t-2);margin-bottom:14px;
+  animation:entraAviso var(--paso) var(--salida)}
+@keyframes entraAviso{
+  from{opacity:.5;transform:translate3d(0,-6px,0)}
+  to{opacity:1;transform:none}
+}
 .aviso.err{background:rgba(255,107,91,.13);color:var(--brasa)}
 .aviso.ok{background:rgba(95,224,180,.12);color:var(--menta)}
 textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
@@ -223,6 +326,29 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--t-1);opacity:.85;
   word-break:break-word}
 .vacio{text-align:center;color:var(--tenue);font-size:var(--t-2);padding:40px 20px;line-height:1.6}
+
+/* Mientras llega la tabla se muestra su forma, no la palabra "Cargando". La
+   pantalla ya está armada cuando aparecen los datos, así que nada salta de
+   lugar: es la diferencia entre esperar y ver que algo viene en camino. */
+.hueso{display:grid;grid-template-columns:20px 34px minmax(0,1fr) 40px 32px;gap:10px;
+  align-items:center;padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.05)}
+.hueso i{display:block;height:11px;border-radius:5px;background:rgba(255,255,255,.055)}
+.hueso .cara{height:34px;border-radius:50%}
+/* Las dos líneas salen de la escala tipográfica, no de números a ojo: son el
+   alto exacto del nombre y el de la fila de tags. Puestas a mano quedaban doce
+   píxeles cortas por fila y la tabla saltaba justo al aparecer, que es
+   exactamente lo que el esqueleto viene a evitar. Así siguen a la escala sola
+   cuando cambia de tamaño en pantalla grande. */
+.hueso .nom{height:calc(var(--t-3) * 1.25);width:58%}
+.hueso .dato{height:calc(var(--t-0) * 1.35 + 4px);width:76%;margin-top:4px}
+.hueso .chico{height:9px}
+@media (prefers-reduced-motion:no-preference){
+  .hueso i{animation:latido 1.35s var(--suave) infinite}
+  .hueso:nth-child(2) i{animation-delay:.08s}  .hueso:nth-child(3) i{animation-delay:.16s}
+  .hueso:nth-child(4) i{animation-delay:.24s}  .hueso:nth-child(5) i{animation-delay:.32s}
+  .hueso:nth-child(n+6) i{animation-delay:.40s}
+}
+@keyframes latido{0%,100%{opacity:.5}50%{opacity:1}}
 
 /* ---------- el pozo ---------- */
 .pozo{position:relative;overflow:hidden;border-radius:18px;padding:24px 20px 20px;
@@ -249,7 +375,12 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
 /* barra de avance del pozo hacia el objetivo */
 .avance-pozo{position:relative;height:6px;border-radius:4px;margin:14px auto 9px;
   max-width:230px;background:rgba(0,0,0,.28);overflow:hidden}
-.avance-pozo i{display:block;height:100%;border-radius:4px;background:var(--reflector)}
+.avance-pozo i{display:block;height:100%;border-radius:4px;background:var(--reflector);
+  transform-origin:left center}
+@media (prefers-reduced-motion:no-preference){
+  .avance-pozo i{animation:creceBarra .9s var(--salida)}
+}
+@keyframes creceBarra{from{transform:scaleX(0)}to{transform:none}}
 
 .desglose{border-top:1px solid var(--linea)}
 .desglose .linea{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline;
@@ -269,6 +400,11 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
 .tacho svg{pointer-events:none}
 .tacho:active{background:rgba(255,107,91,.16);border-color:rgba(255,107,91,.5);
   color:var(--brasa)}
+.editor,.fecha .borrar{animation:despliega var(--paso) var(--salida)}
+@keyframes despliega{
+  from{opacity:.5;transform:translate3d(0,-7px,0)}
+  to{opacity:1;transform:none}
+}
 .editor{margin-top:13px;padding-top:13px;border-top:1px solid var(--linea)}
 .editor .marcador input{padding:10px}
 .editor #eChequeo:not(:empty){margin-top:12px}
@@ -296,7 +432,16 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
 .duplaCap{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 4px}
 .capitan{background:var(--piso);border:1px solid var(--linea);border-radius:15px;
   padding:14px 12px 15px;text-align:center}
-.capitan.listo{background:var(--alto);border-color:#4A4177}
+.capitan.listo{background:var(--alto);border-color:#4A4177;
+  box-shadow:0 2px 4px rgba(0,0,0,.2),0 14px 30px -20px rgba(0,0,0,.9)}
+@media (prefers-reduced-motion:no-preference){
+  .capitan.listo .cara .av{animation:aterriza var(--gesto) var(--salida)}
+}
+@keyframes aterriza{
+  from{opacity:.5;transform:scale(.72)}
+  60%{transform:scale(1.06)}
+  to{opacity:1;transform:none}
+}
 .capitan .rot{color:var(--tenue);font-size:var(--t-0);font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;line-height:1.35;min-height:26px}
 .capitan .cara{display:flex;justify-content:center;margin:11px 0 10px}
@@ -318,9 +463,20 @@ textarea{background:var(--piso);border:1px solid var(--linea);border-radius:9px;
   .cab,.fila{grid-template-columns:24px 40px minmax(0,1fr) 52px 44px;gap:14px}
   .fila{padding:11px 2px}
   .av{width:40px;height:40px;font-size:var(--t-3)}
+  .hueso{grid-template-columns:24px 40px minmax(0,1fr) 52px 44px;gap:14px;padding:11px 2px}
+  .hueso .cara{height:40px}
   .duelo{gap:14px}
   .duelo .caritas{gap:4px}
   .duelo .caritas .av{width:26px;height:26px}
   .puntero{padding:18px 20px;gap:16px}
   .puntero .caras .av{width:54px;height:54px;font-size:var(--t-5)}
+}
+
+/* ---------- el que pidió que nada se mueva ----------
+   Las animaciones de entrada se apagan enteras. Las transiciones de color se
+   quedan: no son movimiento, son la forma de que un cambio de estado se
+   entienda, y sacarlas empeora la app en vez de mejorarla. */
+@media (prefers-reduced-motion:reduce){
+  section.on,.aviso,.respuesta,.editor,.fecha .borrar{animation:none}
+  .nav-luz{transition:none}
 }

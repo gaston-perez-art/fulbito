@@ -6,11 +6,12 @@
 .torre-area{position:relative;height:56vh;max-height:460px;min-height:300px;
   background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18));
   border:1px solid var(--linea);border-radius:14px;overflow:hidden;
-  touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer}
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer;
+  box-shadow:0 2px 4px rgba(0,0,0,.2),0 20px 44px -26px rgba(0,0,0,.95)}
 
 /* La cámara baja a medida que la torre sube. Todo lo que tiene que acompañarla
    —la pila, el bloque en vuelo, el pedazo que cae— cuelga de acá adentro. */
-.torre-camara{position:absolute;inset:0;transition:transform .16s ease-out}
+.torre-camara{position:absolute;inset:0;transition:transform var(--paso) var(--salida)}
 .torre-pila,.torre-caidos{position:absolute;inset:0}
 .torre-pila i,.torre-caidos i,.torre-actual{position:absolute;height:20px;
   border-radius:3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
@@ -39,7 +40,18 @@
 .torre-velo.on{display:flex;position:absolute;inset:0;z-index:3;
   flex-direction:column;align-items:center;justify-content:center;gap:11px;
   padding:26px 22px;text-align:center;background:rgba(20,16,41,.90);
-  backdrop-filter:blur(3px)}
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+  animation:torreVelo var(--paso) var(--salida)}
+@keyframes torreVelo{from{opacity:.45}to{opacity:1}}
+/* El número del final llega después del velo, y llega creciendo: es el momento
+   que la persona se quedó a ver. */
+.torre-velo.fin .torre-final{animation:torreCifra var(--gesto) var(--salida);
+  animation-delay:.08s}
+@keyframes torreCifra{
+  from{opacity:.5;transform:scale(.7)}
+  58%{transform:scale(1.05)}
+  to{opacity:1;transform:none}
+}
 .torre-velo h3{font-family:var(--display);font-size:var(--t-6);line-height:1}
 .torre-velo p{font-size:var(--t-2);color:var(--tenue);line-height:1.5;max-width:30ch}
 .torre-velo .primario{width:auto;padding:14px 30px;margin-top:4px}
@@ -54,10 +66,13 @@
 .torre-velo .torre-texto{font-size:var(--t-1);line-height:1.4;white-space:normal;
   width:100%;text-align:left}
 
-.torre-fila{display:grid;grid-template-columns:20px 34px minmax(0,1fr) 40px;
+.torre-fila{animation:entraFila var(--gesto) var(--salida);
+  display:grid;grid-template-columns:20px 34px minmax(0,1fr) 40px;
   gap:10px;align-items:center;padding:9px 2px;
   border-bottom:1px solid rgba(255,255,255,.05);font-variant-numeric:tabular-nums}
 .torre-fila:last-child{border-bottom:0}
+.torre-fila:nth-child(3){animation-delay:.03s}  .torre-fila:nth-child(4){animation-delay:.06s}
+.torre-fila:nth-child(5){animation-delay:.09s}  .torre-fila:nth-child(n+6){animation-delay:.12s}
 .torre-fila .n{font-family:var(--display);font-size:var(--t-2);color:var(--tenue);
   text-align:center}
 .torre-fila .id{min-width:0}
@@ -73,4 +88,5 @@
   .torre-camara{transition:none}
   .torre-caidos i{animation-duration:.01s}
   .torre-area.perfecto::after{animation-duration:.01s}
+  .torre-velo.on,.torre-velo.fin .torre-final,.torre-fila{animation:none}
 }

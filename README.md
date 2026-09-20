@@ -112,6 +112,36 @@ estaban. Si el experimento no prende, se borran los tres archivos y las cuatro
 líneas del `index.html` que los enganchan, y el registro del torneo queda
 exactamente como estaba.
 
+## Cómo se mueve
+
+Dos curvas y tres duraciones, en `:root`, por la misma razón que hay ocho
+tamaños de letra: si algo necesita una curva que no está, o está mal pensado o
+falta una curva. `--salida` arranca rápido y frena largo, y es la de todo lo
+que aparece; `--suave` es simétrica, para lo que solo cambia de color.
+
+Dos reglas para las animaciones de entrada, las dos por el mismo motivo: el
+navegador suspende las animaciones de una pestaña que no está al frente, y una
+animación suspendida se queda clavada en su primer fotograma.
+
+1. **Ninguna lleva `fill-mode`.** Con `both` el elemento se queda en ese primer
+   fotograma incluso antes de arrancar.
+2. **Ninguna arranca en `opacity: 0`.** Una sección que empieza invisible y se
+   queda ahí es una pantalla en blanco. Empezando en `.5`, el peor caso es un
+   texto tenue que igual se lee. Salen de cero solo las cosas efímeras —el
+   bloque que cae, el destello del perfecto—, que si no corren no dejan rastro.
+
+Es la misma regla que ya seguían el contador del pozo y la ruleta del sorteo:
+ninguna animación puede dejar la app inservible si no llega a correr.
+
+La luz de la barra de pestañas se mide, no se calcula: el ancho de cada pestaña
+lo decide su texto, y hasta que no cargan las fuentes ese ancho no es el
+definitivo, así que se vuelve a medir en `document.fonts.ready`.
+
+El esqueleto de la tabla saca sus alturas de la escala tipográfica —no de
+números a ojo— para medir exactamente lo mismo que la fila que va a reemplazar.
+Puesto a mano quedaba doce píxeles corto por fila y la tabla saltaba justo al
+aparecer, que es lo que el esqueleto viene a evitar.
+
 ## Fotos de los jugadores
 
 El que no tiene foto muestra la inicial del nombre sobre un color derivado del
