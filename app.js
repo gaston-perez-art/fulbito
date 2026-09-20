@@ -13,7 +13,7 @@ let desbloqueado = false;
 let clave = "";                 // la que escribió el encargado; vive solo en memoria
 let form = null;
 let confirmar = null;           // número de fecha esperando confirmación de borrado
-let editando = null;            // {n, golesA, golesB, goleadores} de la fecha en corrección
+let editando = null;            // {n, golesA, golesB} de la fecha en corrección
 let vinieron = [];              // los que confirmaron para hoy
 let invitados = [];             // nombres agregados a mano, fuera de los fijos
 let yaFueron = [];              // capitanes de rondas anteriores
@@ -43,7 +43,7 @@ async function rpc(nombre, args){
 }
 function desdeFila(f){
   return {n:f.n, dia:f.dia, equipoA:f.equipo_a, equipoB:f.equipo_b,
-          golesA:f.goles_a, golesB:f.goles_b, goleadores:f.goleadores || {}};
+          golesA:f.goles_a, golesB:f.goles_b};
 }
 async function leer(){
   if(!configurado){
@@ -72,14 +72,16 @@ async function leer(){
 async function verificarClave(v){
   return await rpc("verificar_clave", {p_clave:v}) === true;
 }
+// p_goleadores viaja vacío: la columna sigue en la base y en la firma de la
+// función, pero ya no se cuenta quién hizo cada gol.
 async function cargarFecha(f){
   return await rpc("cargar_fecha", {
     p_clave:clave, p_dia:f.dia, p_equipo_a:f.equipoA, p_equipo_b:f.equipoB,
-    p_goles_a:f.golesA, p_goles_b:f.golesB, p_goleadores:f.goleadores});
+    p_goles_a:f.golesA, p_goles_b:f.golesB, p_goleadores:{}});
 }
 async function editarFecha(e){
   return await rpc("editar_fecha", {p_clave:clave, p_n:e.n,
-    p_goles_a:e.golesA, p_goles_b:e.golesB, p_goleadores:e.goleadores});
+    p_goles_a:e.golesA, p_goles_b:e.golesB, p_goleadores:{}});
 }
 async function borrarFecha(n){
   return await rpc("borrar_fecha", {p_clave:clave, p_n:n});
@@ -170,17 +172,6 @@ function tabla(){
     .sort((x,y) => (x.pj?0:1)-(y.pj?0:1) || y.pts-x.pts || y.dif-x.dif
                 || y.gf-x.gf || y.g-x.g || x.j.localeCompare(y.j));
 }
-function goleadores(){
-  const g = {};
-  const juegan = new Set(participantes());
-  fechas.forEach(f => Object.entries(f.goleadores||{}).forEach(([n,c]) => {
-    if(juegan.has(n)) g[n] = (g[n]||0) + c;
-  }));
-  const pj = {}; tabla().forEach(r => pj[r.j] = r.pj);
-  return Object.entries(g).filter(([,c]) => c > 0)
-    .map(([n,c]) => ({n, c, pj:pj[n]||0}))
-    .sort((x,y) => y.c-x.c || x.pj-y.pj || x.n.localeCompare(y.n));
-}
 // Cada presencia en una fecha pone la cuota, y eso es todo el pozo. Sin ajustes
 // a mano: un número que nadie puede reconstruir mirando las fechas no sirve.
 function presencias(f){ return f.equipoA.length + f.equipoB.length; }
@@ -189,20 +180,17 @@ function totalPozo(){
 }
 
 /* ====== qué hace válida a una fecha ====== */
-// La suma de los goles de cada equipo tiene que dar exactamente su marcador.
-// Ni más —no puede haber goles de la nada— ni menos: si faltan, alguien no
-// quedó anotado y la tabla de goleadores arranca torcida.
-function sumaDe(lista, gols){ return lista.reduce((s,j) => s + (gols[j]||0), 0); }
-function revisar(A, B, gA, gB, gols){
+// Una fecha es los dos equipos y el marcador, y nada más. Antes el chequeo de
+// que los goles cerraran tapaba un hueco: un campo vacío vale 0 para Number, y
+// 0 a 0 es un resultado posible. Ahora que el marcador es el único dato, se
+// pide explícitamente que estén los dos.
+function revisar(A, B, gA, gB){
   if(!A.length || !B.length) return "Faltan jugadores en alguno de los dos equipos.";
-  if(!Number.isInteger(gA) || !Number.isInteger(gB) || gA < 0 || gB < 0)
-    return "Cargá el resultado con números.";
-  const sA = sumaDe(A, gols), sB = sumaDe(B, gols);
-  if(sA === gA && sB === gB) return null;
-  const faltan = [];
-  if(sA !== gA) faltan.push(`el A hizo ${gA} y tenés ${sA} repartidos`);
-  if(sB !== gB) faltan.push(`el B hizo ${gB} y tenés ${sB} repartidos`);
-  return "Los goles no cierran: " + faltan.join("; ") + ".";
+  const numero = v => String(v).trim() === "" ? NaN : Number(v);
+  const a = numero(gA), b = numero(gB);
+  if(!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0)
+    return "Cargá los dos marcadores, con números.";
+  return null;
 }
 
 /* ====== vistas ====== */
@@ -273,22 +261,6 @@ function vTabla(){
     </div>`;
 }
 
-function vGoles(){
-  if(cargando) return `<div class="vacio">Cargando…</div>`;
-  const g = goleadores();
-  if(!g.length) return `<div class="vacio">Sin goles cargados todavía.</div>`;
-  const max = g[0].c;
-  return g.map((x,i) => `<div class="gol">
-      <div class="n">${i+1}</div>
-      ${avatar(x.n)}
-      <div class="id"><div class="nm">${x.n}</div>
-        <div class="mini">${x.pj} ${x.pj === 1 ? "fecha" : "fechas"} · ${
-          (x.c / Math.max(x.pj,1)).toFixed(1).replace(".",",")} por fecha</div></div>
-      <div class="bar"><i style="width:${Math.round(x.c/max*100)}%"></i></div>
-      <div class="c">${x.c}</div>
-    </div>`).join("");
-}
-
 function vPozo(){
   if(cargando) return `<div class="vacio">Cargando…</div>`;
   const pres = fechas.reduce((s,f) => s + presencias(f), 0);
@@ -322,10 +294,6 @@ function vFechas(){
   if(cargando) return `<div class="vacio">Cargando…</div>`;
   if(!fechas.length) return `<div class="vacio">Sin fechas jugadas.</div>`;
   return [...fechas].reverse().map(f => {
-    const an = Object.entries(f.goleadores||{}).filter(([,c]) => c>0)
-      .sort((a,b) => b[1]-a[1])
-      .map(([n,c]) => c>1 ? `${n} (${c})` : n).join(" · ");
-
     const herramientas = desbloqueado
       ? `<button class="tacho" data-editar="${f.n}" aria-label="Corregir la fecha ${f.n}">
           <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path
@@ -346,7 +314,7 @@ function vFechas(){
            <button class="no" data-cancelar="1">No</button>
            <button class="si" data-borrar-ok="${f.n}">Borrar</button>
          </div>`
-      : (editando && editando.n === f.n ? editor(f) : "");
+      : (editando && editando.n === f.n ? editor() : "");
 
     return `<div class="fecha">
       <div class="top"><span>Fecha ${f.n}</span>
@@ -364,31 +332,19 @@ function vFechas(){
           <div class="quienes">${f.equipoB.join(", ")}</div>
         </div>
       </div>
-      ${an ? `<div class="anot">Goles: ${an}</div>` : ""}
       ${pie}
     </div>`;
   }).join("");
 }
 
-// El editor corrige el resultado y los goleadores. Los equipos no se tocan:
-// si están mal, la fecha se borra y se carga de nuevo.
-function editor(f){
-  const fila = (j, eq) => `<div class="anotador">
-      <div class="nm">${j} <span style="color:var(--tenue);font-size:var(--t-2)">${eq}</span></div>
-      <button data-eg="${j}" data-d="-1">−</button>
-      <div class="v">${editando.goleadores[j]||0}</div>
-      <button data-eg="${j}" data-d="1">+</button>
-    </div>`;
+// El editor corrige el resultado, que es todo lo que hay para corregir. Los
+// equipos no se tocan: si están mal, la fecha se borra y se carga de nuevo.
+function editor(){
   return `<div class="editor">
       <div class="marcador">
         <input type="number" id="eGA" inputmode="numeric" value="${editando.golesA}">
         <span>a</span>
         <input type="number" id="eGB" inputmode="numeric" value="${editando.golesB}">
-      </div>
-      <div class="campo" style="margin:14px 0 0">
-        <label>Goleadores</label>
-        ${f.equipoA.map(j => fila(j,"A")).join("")}
-        ${f.equipoB.map(j => fila(j,"B")).join("")}
       </div>
       <div id="eChequeo"></div>
       <div class="acciones">
@@ -468,7 +424,7 @@ function reglas(){
      d:"Se anota en el grupo de WhatsApp. Entran los primeros " + POR_FECHA + " por orden de anotación. " +
        "Si falta gente se puede traer a alguien de afuera: se lo suma en el sorteo y compite como " +
        "cualquiera —pone la cuota y se lleva los puntos de las fechas que juegue—.",
-     c:"quien quienes anotar anotarse anote lista whatsapp grupo cupo lugares entra entro tarde primeros orden invitado invitados sobra falta faltar gente sumar sumo traer llevar amigo hermano primo ajeno afuera desconocido nuevo"},
+     c:"anotar anotarse anote lista whatsapp grupo cupo lugares entra entro tarde primeros orden viene vienen venir juega juegan invitado invitados sobra falta faltar gente sumar sumo traer llevar amigo hermano primo ajeno afuera desconocido nuevo"},
     {t:"El partido",
      d:"Fútbol 5. Los dos capitanes salen del sorteo que se hace en la app, y después " +
        "reparten los equipos por WhatsApp. El que sale primero elige primero.",
@@ -478,15 +434,22 @@ function reglas(){
        "del equipo: la semana que viene jugás con otros y te los llevás igual. " +
        "Si dos terminan con los mismos puntos, desempata la diferencia de gol, después " +
        "los goles a favor y después los partidos ganados.",
-     c:"puntos punto gane gano empate empato empatar perdi perder pierdo desempate desempata diferencia goles tabla posiciones suma cuantos vale"},
+     c:"puntos punto gane gano empate empato empatar perdi perder pierdo desempate desempata diferencia tabla posiciones suma cuantos vale"},
+    {t:"Los goles",
+     d:"No se cuentan por jugador. El marcador es del equipo y es de cada uno de los que " +
+       "estuvo adentro: si ganaste 17 a 16, esos 17 son tuyos y esos 16 también te los " +
+       "hicieron a vos. En un fútbol 5 nadie puede llevar la cuenta de quién hizo cada gol, " +
+       "así que no se intenta. Lo único que hacen los goles es desempatar la tabla.",
+     c:"gol goles goleador goleadores artillero anotador hice hizo anote anoto meti convertir conteo contar cuantos marcador resultado favor contra desempate"},
     {t:"El pozo",
      d:"Aparte de lo que sale la cancha, cada uno pone " + plata(pozo.cuota) +
        " por fecha jugada. Se acumula toda la temporada y se ve en la pestaña Pozo.",
      c:"pozo plata guita dinero cuota pagar pago pone cuanto sale cuesta acumulado premio bolsa"},
     {t:"El registro",
-     d:"Al terminar se pasan resultado y goleadores al grupo y se cargan acá. Puede cargar " +
-       "cualquiera que tenga la clave. Lo cargado queda firme a las 48 horas.",
-     c:"cargar carga anotar resultado goleadores clave reclamo reclamar error equivoque corregir editar borrar horas firme planilla mal"}
+     d:"Al terminar se pasa el resultado al grupo y se carga acá: los dos equipos y el " +
+       "marcador, nada más. Puede cargar cualquiera que tenga la clave. Lo cargado queda " +
+       "firme a las 48 horas.",
+     c:"cargar carga anotar resultado clave reclamo reclamar error equivoque corregir editar borrar horas firme planilla mal"}
   ];
 }
 
@@ -507,7 +470,7 @@ function vReglas(){
 
 // Busca sobre el reglamento, sin inventar nada: si ninguna regla habla del
 // tema, lo dice y te manda con Gastón.
-const VACIAS = new Set(("que qué como cómo " +
+const VACIAS = new Set(("que qué como cómo quien quién quienes quiénes " +
   "el la los las un una unos unas de del al a y o u en es son se si no me te " +
   "lo le por para con sin sobre mi tu su hay pasa puedo podemos hace hacer tengo tiene " +
   "vos yo nos nuestro esta este eso esa ese pero mas más muy ya").split(" "));
@@ -560,7 +523,7 @@ function responder(){
 function nuevoForm(){
   const equipos = {};
   vinieron.forEach(n => equipos[n] = "a");
-  return {equipos, golesA:"", golesB:"", goleadores:{}, msg:null};
+  return {equipos, golesA:"", golesB:"", msg:null};
 }
 function vCarga(){
   if(!desbloqueado){
@@ -588,12 +551,6 @@ function vCarga(){
     return `<button class="chip ${e||""}" data-j="${j}">${j}${e ? " " + e.toUpperCase() : ""}</button>`;
   }).join("");
   const sel = habilitados.filter(j => form.equipos[j]);
-  const anot = sel.map(j => `<div class="anotador">
-      <div class="nm">${j} <span style="color:var(--tenue);font-size:var(--t-2)">${form.equipos[j].toUpperCase()}</span></div>
-      <button data-g="${j}" data-d="-1">−</button>
-      <div class="v">${form.goleadores[j]||0}</div>
-      <button data-g="${j}" data-d="1">+</button>
-    </div>`).join("");
   const cA = sel.filter(j => form.equipos[j]==="a").length;
   const cB = sel.filter(j => form.equipos[j]==="b").length;
 
@@ -613,7 +570,6 @@ function vCarga(){
         <input type="number" id="gB" inputmode="numeric" value="${form.golesB}" placeholder="B">
       </div>
     </div>
-    ${sel.length ? `<div class="campo"><label>Goleadores</label>${anot}</div>` : ""}
     <div id="chequeo"></div>
     <button class="primario" id="btnGuardar">Guardar fecha ${n}</button>
 
@@ -628,7 +584,6 @@ function vCarga(){
 /* ====== render + eventos ====== */
 function pintar(){
   document.getElementById("v-tabla").innerHTML  = vTabla();
-  document.getElementById("v-goles").innerHTML  = vGoles();
   document.getElementById("v-fechas").innerHTML = vFechas();
   document.getElementById("v-pozo").innerHTML   = vPozo();
   document.getElementById("v-sorteo").innerHTML = vSorteo();
@@ -666,10 +621,7 @@ function revisarCarga(){
   if(!gA || !gB) return;
   form.golesA = gA.value; form.golesB = gB.value;
   const [A,B] = equiposDelForm();
-  const gols = {};
-  Object.entries(form.goleadores).forEach(([j,c]) => { if(c > 0) gols[j] = c; });
-  mostrar("chequeo", "btnGuardar",
-          revisar(A, B, Number(gA.value), Number(gB.value), gols));
+  mostrar("chequeo", "btnGuardar", revisar(A, B, gA.value, gB.value));
 }
 function revisarEdicion(){
   if(!editando) return;
@@ -678,10 +630,7 @@ function revisarEdicion(){
   editando.golesA = gA.value; editando.golesB = gB.value;
   const f = fechas.find(x => x.n === editando.n);
   if(!f) return;
-  const gols = {};
-  Object.entries(editando.goleadores).forEach(([j,c]) => { if(c > 0) gols[j] = c; });
-  mostrar("eChequeo", "btnEditarOk",
-          revisar(f.equipoA, f.equipoB, Number(gA.value), Number(gB.value), gols));
+  mostrar("eChequeo", "btnEditarOk", revisar(f.equipoA, f.equipoB, gA.value, gB.value));
 }
 document.addEventListener("keydown", e => {
   if(e.key === "Enter" && e.target.id === "duda"){ e.preventDefault(); responder(); }
@@ -807,9 +756,7 @@ document.addEventListener("click", async e => {
     vinieron  = vinieron.filter(n => n !== j);
     yaFueron  = yaFueron.filter(n => n !== j);
     caps      = caps.filter(n => n !== j);
-    // si la carga estaba abierta, se va de ahí también: un gol suelto de alguien
-    // que ya no está en ningún equipo viaja a la base y nadie lo ve nunca más.
-    if(form){ delete form.equipos[j]; delete form.goleadores[j]; }
+    if(form) delete form.equipos[j];   // si la carga estaba abierta, se va de ahí también
     guardarLocal(); repintar("v-sorteo", vSorteo); return;
   }
   if(t.dataset.vino){
@@ -867,26 +814,15 @@ document.addEventListener("click", async e => {
     const f = fechas.find(x => x.n === Number(t.dataset.editar));
     if(!f) return;
     confirmar = null;
-    editando = {n:f.n, golesA:f.golesA, golesB:f.golesB, goleadores:{...(f.goleadores||{})}};
+    editando = {n:f.n, golesA:f.golesA, golesB:f.golesB};
     repintar("v-fechas", vFechas); revisarEdicion(); return;
   }
   if(t.id === "btnEditarNo"){
     editando = null; repintar("v-fechas", vFechas); return;
   }
-  // el más y el menos del editor no repintan: tocan el número y revalidan
-  if(t.dataset.eg){
-    const j = t.dataset.eg;
-    const v = Math.max(0, (editando.goleadores[j]||0) + Number(t.dataset.d));
-    editando.goleadores[j] = v;
-    const casilla = t.parentElement.querySelector(".v");
-    if(casilla) casilla.textContent = v;
-    revisarEdicion(); return;
-  }
   if(t.id === "btnEditarOk"){
-    const gols = {};
-    Object.entries(editando.goleadores).forEach(([j,c]) => { if(c > 0) gols[j] = c; });
     const cambio = {n:editando.n, golesA:Number(editando.golesA),
-                    golesB:Number(editando.golesB), goleadores:gols};
+                    golesB:Number(editando.golesB)};
     t.disabled = true; t.textContent = "Guardando…";
     try{
       await editarFecha(cambio);
@@ -923,22 +859,11 @@ document.addEventListener("click", async e => {
     const j = t.dataset.j, e0 = form.equipos[j];
     if(!e0) form.equipos[j] = "a";
     else if(e0 === "a") form.equipos[j] = "b";
-    else { delete form.equipos[j]; delete form.goleadores[j]; }
+    else delete form.equipos[j];
     form.golesA = document.getElementById("gA").value;
     form.golesB = document.getElementById("gB").value;
     form.msg = null; repintarCarga(); return;
   }
-  // Sumar o restar un gol no repinta nada: toca el número y listo. Es el gesto
-  // que más se repite en la noche y no puede mover la pantalla.
-  if(t.dataset.g){
-    const j = t.dataset.g;
-    const v = Math.max(0, (form.goleadores[j]||0) + Number(t.dataset.d));
-    form.goleadores[j] = v;
-    const casilla = t.parentElement.querySelector(".v");
-    if(casilla) casilla.textContent = v;
-    revisarCarga(); return;
-  }
-
   if(t.id === "btnDuda"){ responder(); return; }
 
   if(t.id === "btnPozo"){
@@ -957,15 +882,14 @@ document.addEventListener("click", async e => {
 
   if(t.id === "btnGuardar"){
     const [A,B] = equiposDelForm();
-    const gA = Number(document.getElementById("gA").value);
-    const gB = Number(document.getElementById("gB").value);
-    form.golesA = gA; form.golesB = gB;
-    const gols = {};
-    Object.entries(form.goleadores).forEach(([j,c]) => { if(c > 0) gols[j] = c; });
-    const err = revisar(A, B, gA, gB, gols);
+    const crudoA = document.getElementById("gA").value;
+    const crudoB = document.getElementById("gB").value;
+    const err = revisar(A, B, crudoA, crudoB);
     if(err){ mostrar("chequeo", "btnGuardar", err); return; }
+    const gA = Number(crudoA), gB = Number(crudoB);
+    form.golesA = gA; form.golesB = gB;
     const hoy = new Date();
-    const nueva = {equipoA:A, equipoB:B, golesA:gA, golesB:gB, goleadores:gols,
+    const nueva = {equipoA:A, equipoB:B, golesA:gA, golesB:gB,
       dia: hoy.toLocaleDateString("es-AR", {day:"2-digit", month:"2-digit"})};
     t.disabled = true; t.textContent = "Guardando…";
     try{

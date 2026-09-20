@@ -1,10 +1,16 @@
 # Apertura 2026 — Fútbol en Familia
 
-Tabla de posiciones y goleadores del torneo del grupo. Fútbol 5, sábados a las 18,
+Tabla de posiciones del torneo del grupo. Fútbol 5, sábados a las 18,
 12 fechas del 12/09 al 28/11.
 
 La unidad que compite es el jugador, no el equipo: los equipos se rearman cada
 fecha y los puntos quedan pegados a la persona.
+
+Los goles no se cuentan por jugador. El marcador es del equipo y es de cada uno
+de los que estuvo adentro: el que ganó 17 a 16 se lleva los 17 a favor y los 16
+en contra. En un fútbol 5 nadie puede llevar la cuenta de quién hizo cada gol, y
+una planilla que nadie puede completar de verdad es una planilla que miente. Lo
+único que hacen los goles es desempatar la tabla.
 
 La tabla se arma con el plantel de `jugadores.js` más cualquiera que haya jugado
 una fecha. El que vino un sábado suelto puso la cuota como todos, así que compite
@@ -18,20 +24,19 @@ como todos: entra con su única fecha y queda abajo, sin ensuciar la punta.
    alguien y se trae a uno de afuera, se lo suma ahí con su nombre.
 2. Al terminar: candado, clave, y los diez ya aparecen en el equipo A.
    Un toque pasa a cada uno al B, según cómo quedaron repartidos.
-3. Cargar el marcador y los goles de cada uno.
+3. Cargar el marcador.
 4. Guardar. Queda visible para todo el grupo al instante.
 
 Solo se puede cargar a quien pasó por el sorteo: si no jugó, no puede sumar
-puntos. El que se sumó de afuera pasa por acá como cualquiera —aparece en los
-chips, se lo manda a un equipo y se le cargan los goles—. Y los goles tienen que
-cerrar: la suma de los goleadores de cada equipo
-tiene que dar exactamente su marcador. El error se muestra mientras se carga y
-el botón de guardar queda bloqueado hasta que cierre.
+puntos. El que se sumó de afuera pasa por acá como cualquiera: aparece en los
+chips y se lo manda a un equipo. Los dos marcadores son obligatorios —un campo
+vacío no vale como cero—: el error se muestra mientras se carga y el botón de
+guardar queda bloqueado hasta que estén.
 
 En la pestaña Fechas, con la clave puesta, cada tarjeta trae dos botones: el
-lápiz corrige el resultado y los goleadores de esa fecha, y el tacho la borra
-—se lleva sus puntos y sus goles, y las que siguen se renumeran solas—. Los
-equipos no se editan: si están mal, se borra la fecha y se carga de nuevo.
+lápiz corrige el resultado de esa fecha, y el tacho la borra —se lleva sus
+puntos, y las que siguen se renumeran solas—. Los equipos no se editan: si están
+mal, se borra la fecha y se carga de nuevo.
 
 ## Sorteo de capitanes
 
@@ -59,7 +64,7 @@ Sin build, sin dependencias, sin framework. Cuatro archivos:
 |----------------|--------------------------------------------------------|
 | `index.html`   | Estructura y cabecera                                   |
 | `estilos.css`  | Todo el diseño                                          |
-| `app.js`       | Cálculo de tabla y goleadores, vistas, capa de datos    |
+| `app.js`       | Cálculo de la tabla, vistas, capa de datos              |
 | `jugadores.js` | El plantel y las fotos                                  |
 | `manifest.json`| Nombre e íconos para agregarlo a la pantalla de inicio   |
 | `config.js`    | URL y anon key del proyecto de Supabase                 |
@@ -146,4 +151,4 @@ las coincidencias en el título, en las claves y en el cuerpo, y muestra la regl
 que más puntúa. Si ninguna llega, contesta que no lo encontró y manda a preguntar.
 
 Poner un modelo de verdad ahí adentro exigiría una API key, y en un repo público
-eso lo paga cualquiera que lea el código. Para siete reglas, buscar alcanza.
+eso lo paga cualquiera que lea el código. Para ocho reglas, buscar alcanza.
