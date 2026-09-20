@@ -1,0 +1,76 @@
+/* ====== La Torre · experimento ======
+   Aparte de estilos.css por lo mismo que juego.js está aparte de app.js: si el
+   experimento no prende, se borra el archivo y no queda nada dando vueltas.
+   Las variables son las de estilos.css, que ya está cargado. */
+
+.torre-area{position:relative;height:56vh;max-height:460px;min-height:300px;
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18));
+  border:1px solid var(--linea);border-radius:14px;overflow:hidden;
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer}
+
+/* La cámara baja a medida que la torre sube. Todo lo que tiene que acompañarla
+   —la pila, el bloque en vuelo, el pedazo que cae— cuelga de acá adentro. */
+.torre-camara{position:absolute;inset:0;transition:transform .16s ease-out}
+.torre-pila,.torre-caidos{position:absolute;inset:0}
+.torre-pila i,.torre-caidos i,.torre-actual{position:absolute;height:20px;
+  border-radius:3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+.torre-actual{display:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),
+  0 0 0 1px rgba(255,182,39,.35)}
+.torre-caidos i{animation:torreCae .9s cubic-bezier(.4,0,1,1) forwards}
+@keyframes torreCae{
+  to{transform:translateY(320px) rotate(22deg);opacity:0}
+}
+
+.torre-area.perfecto::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 70%, rgba(255,182,39,.30), transparent 62%);
+  animation:torreFlash .42s ease-out forwards}
+@keyframes torreFlash{from{opacity:1}to{opacity:0}}
+
+.torre-hud{position:absolute;top:12px;left:0;right:0;text-align:center;z-index:2;
+  pointer-events:none;font-variant-numeric:tabular-nums}
+.torre-hud b{display:block;font-family:var(--display);font-size:var(--t-7);
+  line-height:1;color:rgba(243,237,226,.30)}
+.torre-hud span{display:block;margin-top:4px;font-size:var(--t-1);
+  color:var(--reflector);letter-spacing:.04em;text-transform:uppercase}
+
+/* El velo tapa el área entre partida y partida. Durante el juego no existe:
+   sin la clase queda fuera del paso del dedo. */
+.torre-velo{display:none}
+.torre-velo.on{display:flex;position:absolute;inset:0;z-index:3;
+  flex-direction:column;align-items:center;justify-content:center;gap:11px;
+  padding:26px 22px;text-align:center;background:rgba(20,16,41,.90);
+  backdrop-filter:blur(3px)}
+.torre-velo h3{font-family:var(--display);font-size:var(--t-6);line-height:1}
+.torre-velo p{font-size:var(--t-2);color:var(--tenue);line-height:1.5;max-width:30ch}
+.torre-velo .primario{width:auto;padding:14px 30px;margin-top:4px}
+.torre-velo .secundario{width:auto;padding:12px 22px}
+.torre-velo .chips{justify-content:center;max-height:44vh;overflow-y:auto}
+.torre-velo .rot{font-size:var(--t-1);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--reflector)}
+.torre-final{font-family:var(--display);font-size:var(--t-7);line-height:1}
+.torre-velo .torre-yo{margin-top:2px}
+.torre-cambiar{background:none;border:0;padding:0;color:var(--reflector);
+  font:inherit;text-decoration:underline;cursor:pointer}
+.torre-velo .torre-texto{font-size:var(--t-1);line-height:1.4;white-space:normal;
+  width:100%;text-align:left}
+
+.torre-fila{display:grid;grid-template-columns:20px 34px minmax(0,1fr) 40px;
+  gap:10px;align-items:center;padding:9px 2px;
+  border-bottom:1px solid rgba(255,255,255,.05);font-variant-numeric:tabular-nums}
+.torre-fila:last-child{border-bottom:0}
+.torre-fila .n{font-family:var(--display);font-size:var(--t-2);color:var(--tenue);
+  text-align:center}
+.torre-fila .id{min-width:0}
+.torre-fila .nm{font-weight:600;font-size:var(--t-3);line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.torre-fila .mini{color:var(--tenue);font-size:var(--t-1);line-height:1.3}
+.torre-fila .c{font-family:var(--display);font-size:var(--t-4);text-align:right}
+.torre-fila:first-child .c{color:var(--reflector)}
+.torre-fila.yo .nm{color:var(--reflector)}
+.torre-nota{margin-top:20px}
+
+@media (prefers-reduced-motion: reduce){
+  .torre-camara{transition:none}
+  .torre-caidos i{animation-duration:.01s}
+  .torre-area.perfecto::after{animation-duration:.01s}
+}

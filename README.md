@@ -69,10 +69,48 @@ Sin build, sin dependencias, sin framework. Cuatro archivos:
 | `manifest.json`| Nombre e íconos para agregarlo a la pantalla de inicio   |
 | `config.js`    | URL y anon key del proyecto de Supabase                 |
 | `supabase.sql` | Esquema, RLS y funciones de carga                       |
+| `juego.js`     | La Torre — el experimento, aparte de todo lo anterior    |
+| `juego.css`    | Sus estilos                                             |
+| `juego.sql`    | Su tabla de récords. Se corre aparte, o no se corre      |
 
 Los datos viven en Supabase y se leen por REST (`fetch` contra PostgREST), sin
 la librería `supabase-js`: son cuatro llamadas y no justifica sumar una
 dependencia a un sitio que se despliega copiando archivos.
+
+## La Torre
+
+Un experimento, en su propia pestaña. Un bloque se desliza sobre la pila y hay
+que soltarlo alineado: lo que sobresale se cae, y el bloque nuevo queda del
+ancho que se solapó. Cuando no queda dónde apoyar, se terminó.
+
+La dificultad no está programada. No hay niveles ni curva que calibrar: la torre
+se angosta porque uno la angostó, y perdés por algo que hiciste. Lo único que
+sube solo es la velocidad. Soltar el bloque clavado cuenta como **perfecto**: no
+se angosta nada y la racha sigue, que es lo que separa al que juega una vez del
+que se queda.
+
+Un detalle que salió probando: por encima del 50% del área es imposible perder
+—dos bloques de ese ancho siempre se cruzan, no importa dónde se suelten—, así
+que el primero arranca en 45 y la partida tiene tensión desde el primer toque.
+
+Para la tabla del grupo hay que elegir el nombre una vez, y queda en el
+`localStorage` de ese teléfono. No es una cuenta y no hay con qué probar que uno
+sea uno: **cualquiera que abra la consola del navegador puede escribir el
+puntaje que quiera**, porque `guardar_record` no pide la clave de carga —pedirla
+para jugar mataría el juego—. Es una decisión tomada, no un descuido: esto es un
+juego del grupo, no la tabla del torneo, y por eso vive en otra tabla, con otra
+función y en otros archivos.
+
+`juego.sql` se corre aparte. Si no se corre, el juego anda igual y guarda el
+récord solo en el teléfono.
+
+### Por qué vive aparte
+
+`juego.js`, `juego.css` y `juego.sql` no tocan nada de lo anterior: de la app
+toman la lista del plantel, los avatares y la conexión a Supabase, que ya
+estaban. Si el experimento no prende, se borran los tres archivos y las cuatro
+líneas del `index.html` que los enganchan, y el registro del torneo queda
+exactamente como estaba.
 
 ## Fotos de los jugadores
 
