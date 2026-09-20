@@ -6,18 +6,25 @@ Tabla de posiciones y goleadores del torneo del grupo. Fútbol 5, sábados a las
 La unidad que compite es el jugador, no el equipo: los equipos se rearman cada
 fecha y los puntos quedan pegados a la persona.
 
+La tabla se arma con el plantel de `jugadores.js` más cualquiera que haya jugado
+una fecha. El que vino un sábado suelto puso la cuota como todos, así que compite
+como todos: entra con su única fecha y queda abajo, sin ensuciar la punta.
+
 **Sitio:** https://gaston-perez-art.github.io/fulbito/
 
 ## Cómo cargar una fecha
 
-1. Antes de jugar, en **Sorteo**, marcar quiénes vienen. Entran diez.
+1. Antes de jugar, en **Sorteo**, marcar quiénes vienen. Entran diez. Si falta
+   alguien y se trae a uno de afuera, se lo suma ahí con su nombre.
 2. Al terminar: candado, clave, y los diez ya aparecen en el equipo A.
    Un toque pasa a cada uno al B, según cómo quedaron repartidos.
 3. Cargar el marcador y los goles de cada uno.
 4. Guardar. Queda visible para todo el grupo al instante.
 
 Solo se puede cargar a quien pasó por el sorteo: si no jugó, no puede sumar
-puntos. Y los goles tienen que cerrar: la suma de los goleadores de cada equipo
+puntos. El que se sumó de afuera pasa por acá como cualquiera —aparece en los
+chips, se lo manda a un equipo y se le cargan los goles—. Y los goles tienen que
+cerrar: la suma de los goleadores de cada equipo
 tiene que dar exactamente su marcador. El error se muestra mientras se carga y
 el botón de guardar queda bloqueado hasta que cierre.
 
@@ -28,8 +35,8 @@ equipos no se editan: si están mal, se borra la fecha y se carga de nuevo.
 
 ## Sorteo de capitanes
 
-Antes del partido: se marca quiénes vienen —hasta diez— y salen los dos capitanes
-de a uno. El primero que sale elige primero; el reparto se resuelve por WhatsApp.
+Antes del partido: se marca quiénes vienen —hasta diez, y ahí se suma al que no
+está en la lista— y salen los dos capitanes de a uno. El primero que sale elige primero; el reparto se resuelve por WhatsApp.
 El que ya fue capitán queda afuera del sorteo hasta que hayan pasado todos, y ahí
 la rueda se reinicia sola.
 

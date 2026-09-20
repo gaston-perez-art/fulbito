@@ -100,6 +100,14 @@ function leerLocal(){
     vinieron  = Array.isArray(d.vinieron)  ? d.vinieron  : [];
     invitados = Array.isArray(d.invitados) ? d.invitados : [];
     yaFueron  = Array.isArray(d.yaFueron)  ? d.yaFueron  : [];
+    // El invitado que pasó a ser del plantel deja de ser invitado, o queda con
+    // dos chips iguales en el sorteo y nadie entiende cuál tocar. Y lo que quedó
+    // marcado se reapunta al nombre bueno: un "fede" suelto no tiene chip que
+    // tocar, pero entraría igual a la carga como un jugador aparte.
+    invitados = invitados.filter(n => !FIJOS.some(f => igual(f, n)));
+    const bueno = n => plantelDelDia().find(x => igual(x, n));
+    vinieron = vinieron.map(bueno).filter(Boolean);
+    yaFueron = yaFueron.map(bueno).filter(Boolean);
   }catch(e){ /* modo incógnito, almacenamiento bloqueado: arranca limpio */ }
 }
 function guardarLocal(){
@@ -108,6 +116,11 @@ function guardarLocal(){
   }catch(e){ /* si no se puede guardar, el sorteo igual funciona en esta sesión */ }
 }
 function plantelDelDia(){ return FIJOS.concat(invitados); }
+// Dos nombres son el mismo si solo se diferencian en mayúsculas o acentos.
+function igual(a, b){
+  const pelado = t => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  return pelado(a) === pelado(b);
+}
 
 /* ====== plata ====== */
 // 1.000 · 10.000 · 100.000, coma para los decimales. Es el formato de acá.
@@ -131,14 +144,22 @@ function avatar(n){
 }
 
 /* ====== cálculo ====== */
+// El plantel más cualquiera que haya jugado una fecha. Un invitado que vino un
+// sábado puso la cuota como todos, así que compite como todos: entra a la tabla
+// con su única fecha y queda abajo, sin ensuciar la punta.
+function participantes(){
+  const todos = new Set(FIJOS);
+  fechas.forEach(f => f.equipoA.concat(f.equipoB).forEach(n => todos.add(n)));
+  return [...todos];
+}
 function tabla(){
   const t = {};
-  FIJOS.forEach(j => t[j] = {j, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0});
+  participantes().forEach(j => t[j] = {j, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0});
   fechas.forEach(f => {
     [["A","B"],["B","A"]].forEach(([yo,rival]) => {
       const gf = f["goles"+yo], gc = f["goles"+rival];
       f["equipo"+yo].forEach(n => {
-        const r = t[n]; if(!r) return;
+        const r = t[n];
         r.pj++; r.gf += gf; r.gc += gc;
         if(gf > gc){ r.g++; r.pts += 3; } else if(gf === gc){ r.e++; r.pts += 1; } else r.p++;
       });
@@ -151,8 +172,9 @@ function tabla(){
 }
 function goleadores(){
   const g = {};
+  const juegan = new Set(participantes());
   fechas.forEach(f => Object.entries(f.goleadores||{}).forEach(([n,c]) => {
-    if(FIJOS.includes(n)) g[n] = (g[n]||0) + c;
+    if(juegan.has(n)) g[n] = (g[n]||0) + c;
   }));
   const pj = {}; tabla().forEach(r => pj[r.j] = r.pj);
   return Object.entries(g).filter(([,c]) => c > 0)
@@ -443,8 +465,10 @@ function reglas(){
      d:TOTAL_FECHAS + " fechas, los sábados. Cancha y horario a definir.",
      c:"cuando dia dias horario hora cancha donde lugar juega jugar juego sabado sabados empieza arranca termina cierra duracion"},
     {t:"Quién juega",
-     d:"Se anota en el grupo de WhatsApp. Entran los primeros " + POR_FECHA + " por orden de anotación.",
-     c:"quien quienes anotar anotarse anote lista whatsapp grupo cupo lugares entra entro tarde primeros orden invitado sobra falta faltar gente sumar sumo traer llevar amigo hermano primo"},
+     d:"Se anota en el grupo de WhatsApp. Entran los primeros " + POR_FECHA + " por orden de anotación. " +
+       "Si falta gente se puede traer a alguien de afuera: se lo suma en el sorteo y compite como " +
+       "cualquiera —pone la cuota y se lleva los puntos de las fechas que juegue—.",
+     c:"quien quienes anotar anotarse anote lista whatsapp grupo cupo lugares entra entro tarde primeros orden invitado invitados sobra falta faltar gente sumar sumo traer llevar amigo hermano primo ajeno afuera desconocido nuevo"},
     {t:"El partido",
      d:"Fútbol 5. Los dos capitanes salen del sorteo que se hace en la app, y después " +
        "reparten los equipos por WhatsApp. El que sale primero elige primero.",
@@ -535,7 +559,7 @@ function responder(){
 // al B: el armado se decidió en WhatsApp y acá solo se transcribe.
 function nuevoForm(){
   const equipos = {};
-  vinieron.filter(n => FIJOS.includes(n)).forEach(n => equipos[n] = "a");
+  vinieron.forEach(n => equipos[n] = "a");
   return {equipos, golesA:"", golesB:"", goleadores:{}, msg:null};
 }
 function vCarga(){
@@ -552,7 +576,8 @@ function vCarga(){
   const n = fechas.length + 1;
 
   // Solo se carga a quien pasó por el sorteo: si no jugó, no puede sumar puntos.
-  const habilitados = vinieron.filter(j => FIJOS.includes(j));
+  // Los invitados están acá como cualquiera: el que vino, vino.
+  const habilitados = vinieron.slice();
   if(!habilitados.length){
     return `<div class="vacio">Antes de cargar la fecha hay que marcar quiénes
       vinieron, en la pestaña Sorteo.</div>`;
@@ -621,9 +646,14 @@ function verCarga(){ document.querySelector('nav [data-v="carga"]').click(); }
 
 // El error se muestra mientras se carga, no al apretar Guardar, y el botón
 // queda bloqueado hasta que la fecha cierre.
+
+// Los equipos se reconstruyen sobre el plantel del día, no sobre los fijos: si
+// no, el invitado se cae justo acá, después de haber pasado por el sorteo y de
+// estar en pantalla. Mantiene el orden de la lista y deja a los invitados al final.
 function equiposDelForm(){
-  return [FIJOS.filter(j => form.equipos[j] === "a"),
-          FIJOS.filter(j => form.equipos[j] === "b")];
+  const plantel = plantelDelDia();
+  return [plantel.filter(j => form.equipos[j] === "a"),
+          plantel.filter(j => form.equipos[j] === "b")];
 }
 function mostrar(idAviso, idBoton, err){
   const caja = document.getElementById(idAviso), btn = document.getElementById(idBoton);
@@ -777,6 +807,9 @@ document.addEventListener("click", async e => {
     vinieron  = vinieron.filter(n => n !== j);
     yaFueron  = yaFueron.filter(n => n !== j);
     caps      = caps.filter(n => n !== j);
+    // si la carga estaba abierta, se va de ahí también: un gol suelto de alguien
+    // que ya no está en ningún equipo viaja a la base y nadie lo ve nunca más.
+    if(form){ delete form.equipos[j]; delete form.goleadores[j]; }
     guardarLocal(); repintar("v-sorteo", vSorteo); return;
   }
   if(t.dataset.vino){
@@ -788,8 +821,11 @@ document.addEventListener("click", async e => {
   }
   if(t.id === "btnInvitado"){
     const campo = document.getElementById("nuevoInv");
-    const nombre = campo.value.trim();
-    if(!nombre) return;
+    const escrito = campo.value.trim();
+    if(!escrito) return;
+    // Si ya está en la lista, es el mismo aunque lo escriban distinto: "fede" y
+    // "Fede" serían dos jugadores en la tabla, con la mitad de los puntos cada uno.
+    const nombre = plantelDelDia().find(n => igual(n, escrito)) || escrito;
     if(!plantelDelDia().includes(nombre)) invitados = invitados.concat(nombre);
     if(!vinieron.includes(nombre) && vinieron.length < POR_FECHA) vinieron = vinieron.concat(nombre);
     campo.value = "";
